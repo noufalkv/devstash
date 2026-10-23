@@ -440,6 +440,15 @@ Freemium model.
 - Desktop-first, mobile usable
 - Sidebar collapses into a drawer on mobile
 
+### Screenshots
+
+Refer to the screenshots below as a base for the dashboard UI. It does not have to be exact. Use it as a reference:
+
+- @context/screenshots/dashboard-ui-main.png
+- @context/screenshots/dashboard-no-ui-drawer.png
+
+
+
 ### Micro-interactions
 
 - Smooth transitions
