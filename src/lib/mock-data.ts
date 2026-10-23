@@ -2,10 +2,11 @@
 
 export interface User {
   id: string;
-  name: string;
   email: string;
-  avatarInitials: string;
-  plan: "free" | "pro";
+  name: string;
+  isPro: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface ItemType {
@@ -13,162 +14,332 @@ export interface ItemType {
   name: string;
   icon: string; // Lucide icon name
   color: string; // hex
-}
-
-export interface Item {
-  id: string;
-  title: string;
-  description: string;
-  itemTypeId: string;
-  language?: string;
-  tags: string[];
-  isFavorite: boolean;
-  isPinned: boolean;
-  updatedAt: string;
-  collectionIds: string[];
+  isSystem: boolean;
 }
 
 export interface Collection {
   id: string;
   name: string;
   description: string;
+  isFavorite: boolean;
   itemCount: number;
-  itemTypeIds: string[];
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-export const currentUser: User = {
-  id: "user-1",
-  name: "Alex Johnson",
-  email: "alex@devstash.app",
-  avatarInitials: "AJ",
-  plan: "free",
+export interface Item {
+  id: string;
+  title: string;
+  contentType: "TEXT" | "URL";
+  content: string | null;
+  url?: string;
+  description: string;
+  isFavorite: boolean;
+  isPinned: boolean;
+  language: string | null;
+  itemTypeId: string;
+  tags: string[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export const mockUser: User = {
+  id: "user_1",
+  email: "demo@devstash.io",
+  name: "John Doe",
+  isPro: false,
+  createdAt: new Date("2024-01-01"),
+  updatedAt: new Date("2024-01-15"),
 };
 
-export const itemTypes: ItemType[] = [
-  { id: "snippet", name: "Snippet", icon: "Code", color: "#3b82f6" },
-  { id: "prompt", name: "Prompt", icon: "Sparkles", color: "#8b5cf6" },
-  { id: "command", name: "Command", icon: "Terminal", color: "#f97316" },
-  { id: "note", name: "Note", icon: "StickyNote", color: "#fde047" },
-  { id: "file", name: "File", icon: "File", color: "#6b7280" },
-  { id: "image", name: "Image", icon: "Image", color: "#ec4899" },
-  { id: "link", name: "Link", icon: "Link", color: "#10b981" },
+export const mockItemTypes: ItemType[] = [
+  {
+    id: "type_1",
+    name: "snippet",
+    icon: "Code",
+    color: "#3b82f6",
+    isSystem: true,
+  },
+  {
+    id: "type_2",
+    name: "prompt",
+    icon: "Sparkles",
+    color: "#8b5cf6",
+    isSystem: true,
+  },
+  {
+    id: "type_3",
+    name: "command",
+    icon: "Terminal",
+    color: "#f97316",
+    isSystem: true,
+  },
+  {
+    id: "type_4",
+    name: "note",
+    icon: "StickyNote",
+    color: "#fde047",
+    isSystem: true,
+  },
+  {
+    id: "type_5",
+    name: "file",
+    icon: "File",
+    color: "#6b7280",
+    isSystem: true,
+  },
+  {
+    id: "type_6",
+    name: "image",
+    icon: "Image",
+    color: "#ec4899",
+    isSystem: true,
+  },
+  {
+    id: "type_7",
+    name: "link",
+    icon: "Link",
+    color: "#10b981",
+    isSystem: true,
+  },
 ];
 
-export const itemTypeCounts: Record<string, number> = {
-  snippet: 24,
-  prompt: 18,
-  command: 12,
-  note: 9,
-  file: 6,
-  image: 4,
-  link: 14,
-};
-
-export const collections: Collection[] = [
+export const mockCollections: Collection[] = [
   {
-    id: "react-patterns",
+    id: "coll_1",
     name: "React Patterns",
-    description: "Reusable patterns for modern React apps",
-    itemCount: 18,
-    itemTypeIds: ["snippet", "file", "link"],
+    description: "Common React patterns and hooks",
+    isFavorite: true,
+    itemCount: 12,
+    createdAt: new Date("2024-01-05"),
+    updatedAt: new Date("2024-01-15"),
   },
   {
-    id: "prompt-library",
-    name: "Prompt Library",
-    description: "Prompts that actually ship useful work",
-    itemCount: 14,
-    itemTypeIds: ["prompt", "file", "link"],
+    id: "coll_2",
+    name: "Python Snippets",
+    description: "Useful Python code snippets",
+    isFavorite: false,
+    itemCount: 8,
+    createdAt: new Date("2024-01-08"),
+    updatedAt: new Date("2024-01-12"),
   },
   {
-    id: "context-files",
+    id: "coll_3",
     name: "Context Files",
-    description: "Project briefs, docs, and references",
-    itemCount: 9,
-    itemTypeIds: ["file", "file", "image"],
+    description: "AI context files for projects",
+    isFavorite: true,
+    itemCount: 5,
+    createdAt: new Date("2024-01-03"),
+    updatedAt: new Date("2024-01-14"),
   },
   {
-    id: "ship-faster",
-    name: "Ship Faster",
-    description: "Commands and shortcuts for daily flow",
-    itemCount: 22,
-    itemTypeIds: ["command", "snippet", "prompt"],
+    id: "coll_4",
+    name: "Interview Prep",
+    description: "Resources for interview preparation",
+    isFavorite: false,
+    itemCount: 34,
+    createdAt: new Date("2024-01-02"),
+    updatedAt: new Date("2024-01-16"),
+  },
+  {
+    id: "coll_5",
+    name: "Git Commands",
+    description: "Commonly used git commands",
+    isFavorite: true,
+    itemCount: 7,
+    createdAt: new Date("2024-01-06"),
+    updatedAt: new Date("2024-01-13"),
+  },
+  {
+    id: "coll_6",
+    name: "AI Prompts",
+    description: "Curated prompts for coding",
+    isFavorite: false,
+    itemCount: 6,
+    createdAt: new Date("2024-01-10"),
+    updatedAt: new Date("2024-01-15"),
   },
 ];
 
-export const items: Item[] = [
+export const mockItems: Item[] = [
   {
-    id: "use-debounce-hook",
-    title: "useDebounce hook",
-    description:
-      "A tiny, production-ready debounce hook for search and autosave experiences.",
-    itemTypeId: "snippet",
-    language: "TypeScript",
-    tags: ["react", "hooks"],
+    id: "item_1",
+    title: "useAuth Hook",
+    contentType: "TEXT",
+    content: "const useAuth = () => {\n  // Custom auth hook implementation\n}",
+    description: "Custom authentication hook for React applications",
+    isFavorite: true,
+    isPinned: true,
+    language: "typescript",
+    itemTypeId: "type_1",
+    tags: ["react", "auth", "hooks"],
+    createdAt: new Date("2024-01-15"),
+    updatedAt: new Date("2024-01-15"),
+  },
+  {
+    id: "item_2",
+    title: "API Error Handling Pattern",
+    contentType: "TEXT",
+    content: "try {\n  // API call\n} catch (error) {\n  // Handle error\n}",
+    description: "Fetch wrapper with exponential backoff retry logic",
+    isFavorite: true,
+    isPinned: true,
+    language: "typescript",
+    itemTypeId: "type_1",
+    tags: ["api", "error-handling"],
+    createdAt: new Date("2024-01-14"),
+    updatedAt: new Date("2024-01-14"),
+  },
+  {
+    id: "item_3",
+    title: "Code Review Prompt",
+    contentType: "TEXT",
+    content: "Review this code for security and performance issues...",
+    description: "Prompt for AI code reviews",
+    isFavorite: false,
+    isPinned: false,
+    language: null,
+    itemTypeId: "type_2",
+    tags: ["ai", "code-review"],
+    createdAt: new Date("2024-01-13"),
+    updatedAt: new Date("2024-01-13"),
+  },
+  {
+    id: "item_4",
+    title: "git reset --hard HEAD~1",
+    contentType: "TEXT",
+    content: "git reset --hard HEAD~1",
+    description: "Reset to previous commit (destructive)",
+    isFavorite: false,
+    isPinned: false,
+    language: "bash",
+    itemTypeId: "type_3",
+    tags: ["git", "reset"],
+    createdAt: new Date("2024-01-12"),
+    updatedAt: new Date("2024-01-12"),
+  },
+  {
+    id: "item_5",
+    title: "useLocalStorage Hook",
+    contentType: "TEXT",
+    content: "const useLocalStorage = (key, initialValue) => { ... }",
+    description: "Persistent state management with localStorage",
+    isFavorite: false,
+    isPinned: false,
+    language: "typescript",
+    itemTypeId: "type_1",
+    tags: ["react", "hooks", "storage"],
+    createdAt: new Date("2024-01-11"),
+    updatedAt: new Date("2024-01-11"),
+  },
+  {
+    id: "item_6",
+    title: "Docker Compose Up",
+    contentType: "TEXT",
+    content: "docker-compose up -d --build",
+    description: "Start containers in detached mode with rebuild",
     isFavorite: true,
     isPinned: false,
-    updatedAt: "2 min ago",
-    collectionIds: ["react-patterns", "ship-faster"],
+    language: "bash",
+    itemTypeId: "type_3",
+    tags: ["docker", "devops"],
+    createdAt: new Date("2024-01-10"),
+    updatedAt: new Date("2024-01-10"),
   },
   {
-    id: "senior-frontend-review",
-    title: "Senior frontend review",
-    description:
-      "Review this pull request like a staff engineer. Prioritize correctness, accessibility, and maintainability.",
-    itemTypeId: "prompt",
-    tags: ["review", "frontend"],
+    id: "item_7",
+    title: "Explain Code Prompt",
+    contentType: "TEXT",
+    content: "Explain this code step by step, highlighting key concepts...",
+    description: "AI prompt for code explanations",
     isFavorite: false,
     isPinned: false,
-    updatedAt: "18 min ago",
-    collectionIds: ["prompt-library"],
+    language: null,
+    itemTypeId: "type_2",
+    tags: ["ai", "learning"],
+    createdAt: new Date("2024-01-09"),
+    updatedAt: new Date("2024-01-09"),
   },
   {
-    id: "git-cleanup-aliases",
-    title: "git cleanup aliases",
-    description:
-      "Aliases for pruning branches, inspecting history, and keeping a clean local workspace.",
-    itemTypeId: "command",
-    language: "Bash",
-    tags: ["git", "cli"],
+    id: "item_8",
+    title: "Meeting Notes Template",
+    contentType: "TEXT",
+    content:
+      "# Meeting Notes\n\n## Date:\n## Attendees:\n## Agenda:\n## Action Items:",
+    description: "Markdown template for meeting notes",
     isFavorite: false,
     isPinned: false,
-    updatedAt: "Yesterday",
-    collectionIds: ["ship-faster"],
+    language: "markdown",
+    itemTypeId: "type_4",
+    tags: ["template", "meetings"],
+    createdAt: new Date("2024-01-08"),
+    updatedAt: new Date("2024-01-08"),
   },
   {
-    id: "app-router-checklist",
-    title: "App router checklist",
-    description:
-      "The final pass before shipping a Next.js app: metadata, errors, loading, and accessibility.",
-    itemTypeId: "note",
-    tags: ["next.js", "launch"],
+    id: "item_9",
+    title: "Prisma Migration Command",
+    contentType: "TEXT",
+    content: "npx prisma migrate dev --name migration_name",
+    description: "Create and apply Prisma database migration",
     isFavorite: false,
     isPinned: false,
-    updatedAt: "Yesterday",
-    collectionIds: ["context-files"],
+    language: "bash",
+    itemTypeId: "type_3",
+    tags: ["prisma", "database"],
+    createdAt: new Date("2024-01-07"),
+    updatedAt: new Date("2024-01-07"),
   },
   {
-    id: "build-a-command-palette",
-    title: "Build a command palette",
-    description:
-      "A keyboard-first command palette pattern with grouped actions and fuzzy search.",
-    itemTypeId: "snippet",
-    language: "React",
-    tags: ["ui", "keyboard"],
+    id: "item_10",
+    title: "React Query Setup",
+    contentType: "TEXT",
+    content: "const queryClient = new QueryClient()",
+    description: "TanStack Query client configuration",
     isFavorite: false,
     isPinned: false,
-    updatedAt: "3 days ago",
-    collectionIds: ["react-patterns"],
+    language: "typescript",
+    itemTypeId: "type_1",
+    tags: ["react", "data-fetching"],
+    createdAt: new Date("2024-01-06"),
+    updatedAt: new Date("2024-01-06"),
   },
   {
-    id: "linear-design-notes",
-    title: "Linear design notes",
-    description:
-      "A visual reference for building calm, dense, keyboard-friendly product interfaces.",
-    itemTypeId: "link",
-    tags: ["inspiration"],
+    id: "item_11",
+    title: "GitHub Actions Workflow",
+    contentType: "TEXT",
+    content: "name: CI\non: [push, pull_request]",
+    description: "Basic CI/CD workflow template",
     isFavorite: false,
     isPinned: false,
-    updatedAt: "4 days ago",
-    collectionIds: ["context-files"],
+    language: "yaml",
+    itemTypeId: "type_1",
+    tags: ["ci-cd", "github"],
+    createdAt: new Date("2024-01-05"),
+    updatedAt: new Date("2024-01-05"),
+  },
+  {
+    id: "item_12",
+    title: "Tailwind CSS Resources",
+    contentType: "URL",
+    content: null,
+    url: "https://tailwindcss.com/docs",
+    description: "Official Tailwind CSS documentation",
+    isFavorite: true,
+    isPinned: false,
+    language: null,
+    itemTypeId: "type_7",
+    tags: ["css", "docs"],
+    createdAt: new Date("2024-01-04"),
+    updatedAt: new Date("2024-01-04"),
   },
 ];
+
+export const mockItemTypeCounts: Record<string, number> = {
+  snippet: 24,
+  prompt: 18,
+  command: 15,
+  note: 12,
+  file: 5,
+  image: 3,
+  link: 8,
+};
