@@ -21,6 +21,25 @@ npm run start   # run production build
 npm run lint    # eslint (flat config, eslint.config.mjs)
 ```
 
+### Database (Prisma 7 + Neon)
+
+Requires Node 22 — run `nvm use` first (see `.nvmrc`). Each script has a direct `npx` equivalent.
+
+```bash
+npm run db:generate                     # npx prisma generate — regenerate client into src/generated/prisma (also runs on postinstall)
+npm run db:migrate -- --name <name>     # npx prisma migrate dev --name <name> — create + apply migration (dev branch)
+npm run db:migrate:deploy               # npx prisma migrate deploy — apply migrations in production
+npm run db:migrate:status               # npx prisma migrate status — verify migrations are in sync (run before committing)
+npm run db:seed                         # npx prisma db seed — seed system item types (prisma/seed.ts)
+npm run db:studio                       # npx prisma studio — browse data in a GUI
+npm run db:test                         # npx tsx scripts/test-db.ts — check connection, migrations, seed data, CRUD (rolled back)
+npm run db:push                         # intentionally fails — never use `prisma db push`, always migrate
+```
+
+- Connection URLs live in `.env` (see `.env.example`): `DATABASE_URL` (pooled, app runtime) and `DIRECT_URL` (direct, Prisma CLI/migrations), configured in `prisma.config.ts`.
+- `migrate dev` does not run `generate` or the seed in Prisma 7 — run them explicitly.
+- Import the client from `@/lib/prisma`.
+
 There is no test runner configured yet — no test script, framework, or test files exist in the repo.
 
 ## Architecture
