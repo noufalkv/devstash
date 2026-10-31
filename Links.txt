@@ -1,0 +1,10 @@
+https://cursor.directory/ - for code standared
+
+https://v0.app/.  for generate the UI Design
+https://www.prisma.io/
+https://console.neon.tech/
+
+feature order
+
+dashboard-phase-1-spec.md 2,3 
+database-spec.md
