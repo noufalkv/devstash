@@ -4,26 +4,8 @@ import { CollectionCard } from "@/components/dashboard/collection-card";
 import { ItemRow } from "@/components/dashboard/item-row";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { Card, CardContent } from "@/components/ui/card";
-import { mockCollections, mockItems } from "@/lib/mock-data";
-
-const stats = [
-  { label: "Items", value: mockItems.length, icon: LayoutGrid },
-  { label: "Collections", value: mockCollections.length, icon: FolderOpen },
-  {
-    label: "Favorite Items",
-    value: mockItems.filter((item) => item.isFavorite).length,
-    icon: Heart,
-  },
-  {
-    label: "Favorite Collections",
-    value: mockCollections.filter((collection) => collection.isFavorite).length,
-    icon: Star,
-  },
-];
-
-const recentCollections = [...mockCollections]
-  .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
-  .slice(0, 6);
+import { getCollectionStats, getRecentCollections } from "@/lib/db/collections";
+import { mockItems } from "@/lib/mock-data";
 
 const pinnedItems = mockItems
   .filter((item) => item.isPinned)
@@ -33,7 +15,27 @@ const recentItems = [...mockItems]
   .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
   .slice(0, 10);
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const [recentCollections, collectionStats] = await Promise.all([
+    getRecentCollections(),
+    getCollectionStats(),
+  ]);
+
+  const stats = [
+    { label: "Items", value: mockItems.length, icon: LayoutGrid },
+    { label: "Collections", value: collectionStats.total, icon: FolderOpen },
+    {
+      label: "Favorite Items",
+      value: mockItems.filter((item) => item.isFavorite).length,
+      icon: Heart,
+    },
+    {
+      label: "Favorite Collections",
+      value: collectionStats.favorites,
+      icon: Star,
+    },
+  ];
+
   return (
     <div className="flex flex-col gap-8">
       <div>
