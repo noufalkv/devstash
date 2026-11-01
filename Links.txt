@@ -12,3 +12,6 @@ seed-spec.md
 dashboard-collections-spec.md
 dashboard-items-spec.md
 stats-sidebar-spec.md
+add-pro-badge-sidebar.md
+
+ and delete the branch: `gh pr merge <number> --rebase --delete-branch`
