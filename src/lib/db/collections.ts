@@ -24,13 +24,14 @@ export interface CollectionStats {
   favorites: number;
 }
 
-export async function getRecentCollections(
-  limit = 6,
+// Ordered by updatedAt, most recent first; all collections when take is omitted
+async function findCollectionSummaries(
+  take?: number,
 ): Promise<CollectionSummary[]> {
   const collections = await prisma.collection.findMany({
     where: { user: { email: DEMO_USER_EMAIL } },
     orderBy: { updatedAt: "desc" },
-    take: limit,
+    take,
     select: {
       id: true,
       name: true,
@@ -64,6 +65,14 @@ export async function getRecentCollections(
       itemTypes: [...typeCounts.values()].sort((a, b) => b.count - a.count),
     };
   });
+}
+
+export function getRecentCollections(limit = 6): Promise<CollectionSummary[]> {
+  return findCollectionSummaries(limit);
+}
+
+export function getSidebarCollections(): Promise<CollectionSummary[]> {
+  return findCollectionSummaries();
 }
 
 export async function getCollectionStats(): Promise<CollectionStats> {

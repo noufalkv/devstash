@@ -1,6 +1,6 @@
 # Current Feature
 
-Dashboard Items (Real Data)
+Stats & Sidebar (Real Data)
 
 ## Status
 
@@ -8,20 +8,20 @@ Completed
 
 ## Goals
 
-- Replace the mock item data in the dashboard main area (Pinned and Recent Items) with real data from the Neon database via Prisma
-- Create `src/lib/db/items.ts` with data fetching functions
-- Fetch items directly in the server component (no client fetching)
-- Keep the current Pinned and Recent Items design
-- Item card icon and border color derived from the item type
-- Display item type tags and everything else currently shown on the cards
-- Hide the Pinned section entirely when there are no pinned items
-- Update the item stats display (items, favorite items) to use real data
+- Display stats in the main area from database data, keeping the current design/layout
+- Display the system item types in the sidebar with their icons, linking to /items/[typename]
+- Display the actual collection data from the database in the sidebar
+- Add a "View all collections" link under the collections list that goes to /collections
+- Keep the star icons for favorite collections; for recent collections, show a colored circle based on the most-used item type in that collection
+- Add the database functions to `src/lib/db/items.ts` (use `src/lib/db/collections.ts` for reference)
 
 ## Notes
 
-- Spec: @context/features/dashboard-items-spec.md
-- Mock data being replaced: @src/lib/mock-data.ts
-- Design reference: @context/screenshots/dashboard-ui-main.png (layout and design already exist)
+- Spec: @context/features/stats-sidebar-spec.md
+- Mock data being replaced: @src/lib/mock-data.ts (now only used by `src/components/layout/sidebar-nav.tsx`)
+- Reference: @src/lib/db/collections.ts
+- `src/lib/db/items.ts` already exists from the Dashboard Items feature — extend it rather than recreate it
+- Main area stats (items, collections, favorites) already use real data from the previous two features — verify only
 
 ## History
 
@@ -35,3 +35,4 @@ Completed
 - Seed Sample Data (feature/seed-data): rewrote `prisma/seed.ts` to seed the 7 system item types, a demo user (demo@devstash.io, bcryptjs-hashed password) and 5 collections with sample snippets, prompts, commands and links. The seed is idempotent: re-running deletes the demo user and recreates it, and cascades remove their data. Added `bcryptjs`.
 - Dashboard Collections (feature/dashboard-collections): replaced mock collection data in the dashboard main area with real data from Neon via Prisma. Added `src/lib/db/collections.ts` (`getRecentCollections`, `getCollectionStats`). Collection cards now show a left border colored by the most-used item type and small colored icons for every type in the collection. The Collections and Favorite Collections stats use real counts. Queries are scoped to the demo user until auth exists. Added a `loading.tsx` skeleton, which `cacheComponents` requires for uncached data. Lint and build pass.
 - Dashboard Items (feature/dashboard-items): replaced mock item data in the dashboard Pinned and Recent Items sections with real data from Neon via Prisma. Added `src/lib/db/items.ts` (`getPinnedItems`, `getRecentItems`, `getItemStats`) and moved the demo user email into a shared `src/lib/db/demo-user.ts`. Item rows take their icon, icon background and left border color from the item type. The Pinned section is hidden when there are no pinned items. The Items and Favorite Items stats use real counts. Lint and build pass.
+- Stats & Sidebar (feature/stats-sidebar): replaced mock data in the sidebar with real data from Neon via Prisma. Added `getSidebarItemTypes` to `src/lib/db/items.ts` (system types in a fixed order with per-type item counts), `getSidebarCollections` to `src/lib/db/collections.ts` (shares a `findCollectionSummaries` helper with `getRecentCollections`), and `src/lib/db/users.ts` (`getSidebarUser`) for the footer. The dashboard layout fetches the sidebar data on the server inside a `Suspense` boundary with a new `SidebarSkeleton`. Type labels are capitalized ("Snippets", "Prompts", …) and link to /items/[type]s. Favorite collections keep the star; recent collections show a colored circle for their most-used item type. Added a "View all collections" link to /collections. Main area stats already used real data. `src/lib/mock-data.ts` is no longer used. Lint and build pass.

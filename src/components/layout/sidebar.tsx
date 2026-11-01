@@ -1,6 +1,6 @@
 "use client";
 
-import { SidebarNav } from "@/components/layout/sidebar-nav";
+import { SidebarNav, type SidebarData } from "@/components/layout/sidebar-nav";
 import { useSidebar } from "@/components/layout/sidebar-provider";
 import {
   Sheet,
@@ -9,7 +9,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 
-export function Sidebar() {
+export function Sidebar(data: SidebarData) {
   const { open, openMobile, setOpenMobile } = useSidebar();
 
   return (
@@ -20,7 +20,7 @@ export function Sidebar() {
         }`}
       >
         <div className="h-full w-64">
-          <SidebarNav />
+          <SidebarNav {...data} />
         </div>
       </aside>
 
@@ -30,7 +30,7 @@ export function Sidebar() {
           <SheetDescription className="sr-only">
             Browse item types and collections
           </SheetDescription>
-          <SidebarNav onNavigate={() => setOpenMobile(false)} />
+          <SidebarNav {...data} onNavigate={() => setOpenMobile(false)} />
         </SheetContent>
       </Sheet>
     </>
