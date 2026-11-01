@@ -1,7 +1,5 @@
+import { DEMO_USER_EMAIL } from "@/lib/db/demo-user";
 import { prisma } from "@/lib/prisma";
-
-// No auth yet — scope all dashboard queries to the seeded demo user.
-const DEMO_USER_EMAIL = "demo@devstash.io";
 
 export interface CollectionItemType {
   id: string;
