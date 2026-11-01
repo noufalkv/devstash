@@ -25,6 +25,21 @@ export interface ItemStats {
   favorites: number;
 }
 
+export interface SidebarItemType extends ItemSummaryType {
+  count: number;
+}
+
+// Display order for system types in the sidebar
+const SYSTEM_TYPE_ORDER = [
+  "snippet",
+  "prompt",
+  "command",
+  "note",
+  "file",
+  "image",
+  "link",
+];
+
 const itemSummarySelect = {
   id: true,
   title: true,
@@ -68,4 +83,29 @@ export async function getItemStats(): Promise<ItemStats> {
   ]);
 
   return { total, favorites };
+}
+
+export async function getSidebarItemTypes(): Promise<SidebarItemType[]> {
+  const [types, counts] = await Promise.all([
+    prisma.itemType.findMany({
+      where: { isSystem: true },
+      select: { id: true, name: true, icon: true, color: true },
+    }),
+    prisma.item.groupBy({
+      by: ["itemTypeId"],
+      where: { user: { email: DEMO_USER_EMAIL } },
+      _count: { _all: true },
+    }),
+  ]);
+
+  const countByType = new Map(
+    counts.map((c) => [c.itemTypeId, c._count._all]),
+  );
+
+  return types
+    .map((type) => ({ ...type, count: countByType.get(type.id) ?? 0 }))
+    .sort(
+      (a, b) =>
+        SYSTEM_TYPE_ORDER.indexOf(a.name) - SYSTEM_TYPE_ORDER.indexOf(b.name),
+    );
 }

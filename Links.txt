@@ -9,3 +9,6 @@ feature order
 dashboard-phase-1-spec.md 2,3 
 database-spec.md
 seed-spec.md
+dashboard-collections-spec.md
+dashboard-items-spec.md
+stats-sidebar-spec.md
