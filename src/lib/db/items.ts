@@ -67,8 +67,8 @@ async function findItemSummaries(
   }));
 }
 
-export function getPinnedItems(): Promise<ItemSummary[]> {
-  return findItemSummaries({ where: { isPinned: true } });
+export function getPinnedItems(limit = 10): Promise<ItemSummary[]> {
+  return findItemSummaries({ where: { isPinned: true }, take: limit });
 }
 
 export function getRecentItems(limit = 10): Promise<ItemSummary[]> {
