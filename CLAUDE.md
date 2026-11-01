@@ -44,6 +44,17 @@ npm run db:push                         # intentionally fails — never use `pri
 - `migrate dev` does not run `generate` or the seed in Prisma 7 — run them explicitly.
 - Import the client from `@/lib/prisma`.
 
+### Neon MCP
+
+When using any Neon MCP tool (`run_sql`, `get_database_tables`, `describe_table_schema`, `prepare_database_migration`, etc.):
+
+- **Project:** always use the `Devstash` project (`project_id: nameless-thunder-82960607`).
+- **Branch:** always use the `develop` branch (`branch_id: br-green-voice-axlr1mye`). Pass `branch_id` explicitly on every call. Never rely on the default, because the default branch is `production`.
+- **Never touch production** (`br-gentle-bird-ax2a2nkc`) unless I explicitly ask for it in that message. This covers reads, writes, schema changes, resets, restores and deletions. Approval for production in one request does not carry over to the next.
+- Ask before running any destructive SQL or tool (DELETE, DROP, TRUNCATE, `reset_from_parent`, `restore_snapshot`, branch or project deletion), even on `develop`.
+- Schema changes go through Prisma migrations (`npm run db:migrate`), not the MCP. Use the MCP for reading and inspecting data.
+- If a task seems to need production, or you can't tell which branch a call will hit, stop and ask.
+
 There is no test runner configured yet — no test script, framework, or test files exist in the repo.
 
 ## Architecture

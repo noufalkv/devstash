@@ -4,6 +4,10 @@ https://v0.app/.  for generate the UI Design
 https://www.prisma.io/
 https://console.neon.tech/
 
+https://neon.com/guides/claude-code-mcp-neon
+https://context7.com/
+
+
 feature order
 
 dashboard-phase-1-spec.md 2,3 
@@ -13,3 +17,8 @@ dashboard-collections-spec.md
 dashboard-items-spec.md
 stats-sidebar-spec.md
 add-pro-badge-sidebar.md
+
+
+
+devstash context7 api key
+devstash : ctx7sk-6c85f01b-6246-4a2e-9ae3-57c2ca9ec92a
