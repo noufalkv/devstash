@@ -1,27 +1,34 @@
 import { Pin, Star } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import type { ItemSummary } from "@/lib/db/items";
 import { ITEM_TYPE_ICONS } from "@/lib/item-type-icons";
-import { mockItemTypes, type Item } from "@/lib/mock-data";
-
-const itemTypeById = new Map(mockItemTypes.map((type) => [type.id, type]));
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
   month: "short",
   day: "numeric",
 });
 
-export function ItemRow({ item }: { item: Item }) {
-  const type = itemTypeById.get(item.itemTypeId);
-  const Icon = type ? ITEM_TYPE_ICONS[type.icon] : null;
+export function ItemRow({ item }: { item: ItemSummary }) {
+  const { color } = item.itemType;
+  const Icon = ITEM_TYPE_ICONS[item.itemType.icon];
 
   return (
-    <div className="flex items-start gap-3 border-b border-border py-3 last:border-b-0">
+    <div
+      className="flex items-start gap-3 border-b border-l-2 border-border py-3 pl-3 last:border-b-0"
+      style={{ borderLeftColor: color }}
+    >
       <div
         className="flex size-9 shrink-0 items-center justify-center rounded-lg"
-        style={{ backgroundColor: `${type?.color ?? "#6b7280"}1a` }}
+        style={{ backgroundColor: `${color}1a` }}
       >
-        {Icon && <Icon className="size-4" style={{ color: type?.color }} />}
+        {Icon && (
+          <Icon
+            className="size-4"
+            style={{ color }}
+            aria-label={item.itemType.name}
+          />
+        )}
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
@@ -33,9 +40,11 @@ export function ItemRow({ item }: { item: Item }) {
             <Star className="size-3.5 shrink-0 fill-yellow-400 text-yellow-400" />
           )}
         </div>
-        <p className="truncate text-sm text-muted-foreground">
-          {item.description}
-        </p>
+        {item.description && (
+          <p className="truncate text-sm text-muted-foreground">
+            {item.description}
+          </p>
+        )}
         {item.tags.length > 0 && (
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {item.tags.map((tag) => (

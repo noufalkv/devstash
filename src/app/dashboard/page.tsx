@@ -5,30 +5,22 @@ import { ItemRow } from "@/components/dashboard/item-row";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { Card, CardContent } from "@/components/ui/card";
 import { getCollectionStats, getRecentCollections } from "@/lib/db/collections";
-import { mockItems } from "@/lib/mock-data";
-
-const pinnedItems = mockItems
-  .filter((item) => item.isPinned)
-  .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-
-const recentItems = [...mockItems]
-  .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-  .slice(0, 10);
+import { getItemStats, getPinnedItems, getRecentItems } from "@/lib/db/items";
 
 export default async function DashboardPage() {
-  const [recentCollections, collectionStats] = await Promise.all([
-    getRecentCollections(),
-    getCollectionStats(),
-  ]);
+  const [recentCollections, collectionStats, pinnedItems, recentItems, itemStats] =
+    await Promise.all([
+      getRecentCollections(),
+      getCollectionStats(),
+      getPinnedItems(),
+      getRecentItems(),
+      getItemStats(),
+    ]);
 
   const stats = [
-    { label: "Items", value: mockItems.length, icon: LayoutGrid },
+    { label: "Items", value: itemStats.total, icon: LayoutGrid },
     { label: "Collections", value: collectionStats.total, icon: FolderOpen },
-    {
-      label: "Favorite Items",
-      value: mockItems.filter((item) => item.isFavorite).length,
-      icon: Heart,
-    },
+    { label: "Favorite Items", value: itemStats.favorites, icon: Heart },
     {
       label: "Favorite Collections",
       value: collectionStats.favorites,
@@ -61,12 +53,12 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      <section className="flex flex-col gap-4">
-        <div className="flex items-center gap-2">
-          <Pin className="size-4 text-muted-foreground" />
-          <h2 className="text-xl font-semibold">Pinned</h2>
-        </div>
-        {pinnedItems.length > 0 ? (
+      {pinnedItems.length > 0 && (
+        <section className="flex flex-col gap-4">
+          <div className="flex items-center gap-2">
+            <Pin className="size-4 text-muted-foreground" />
+            <h2 className="text-xl font-semibold">Pinned</h2>
+          </div>
           <Card>
             <CardContent className="flex flex-col">
               {pinnedItems.map((item) => (
@@ -74,10 +66,8 @@ export default async function DashboardPage() {
               ))}
             </CardContent>
           </Card>
-        ) : (
-          <p className="text-sm text-muted-foreground">No pinned items yet.</p>
-        )}
-      </section>
+        </section>
+      )}
 
       <section className="flex flex-col gap-4">
         <h2 className="text-xl font-semibold">Recent Items</h2>
