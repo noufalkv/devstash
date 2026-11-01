@@ -1,27 +1,16 @@
 # Current Feature
 
-Stats & Sidebar (Real Data)
-
 ## Status
 
-Completed
+Not Started
 
 ## Goals
 
-- Display stats in the main area from database data, keeping the current design/layout
-- Display the system item types in the sidebar with their icons, linking to /items/[typename]
-- Display the actual collection data from the database in the sidebar
-- Add a "View all collections" link under the collections list that goes to /collections
-- Keep the star icons for favorite collections; for recent collections, show a colored circle based on the most-used item type in that collection
-- Add the database functions to `src/lib/db/items.ts` (use `src/lib/db/collections.ts` for reference)
+<!-- Goals go here -->
 
 ## Notes
 
-- Spec: @context/features/stats-sidebar-spec.md
-- Mock data being replaced: @src/lib/mock-data.ts (now only used by `src/components/layout/sidebar-nav.tsx`)
-- Reference: @src/lib/db/collections.ts
-- `src/lib/db/items.ts` already exists from the Dashboard Items feature — extend it rather than recreate it
-- Main area stats (items, collections, favorites) already use real data from the previous two features — verify only
+<!-- Notes go here -->
 
 ## History
 
@@ -36,3 +25,4 @@ Completed
 - Dashboard Collections (feature/dashboard-collections): replaced mock collection data in the dashboard main area with real data from Neon via Prisma. Added `src/lib/db/collections.ts` (`getRecentCollections`, `getCollectionStats`). Collection cards now show a left border colored by the most-used item type and small colored icons for every type in the collection. The Collections and Favorite Collections stats use real counts. Queries are scoped to the demo user until auth exists. Added a `loading.tsx` skeleton, which `cacheComponents` requires for uncached data. Lint and build pass.
 - Dashboard Items (feature/dashboard-items): replaced mock item data in the dashboard Pinned and Recent Items sections with real data from Neon via Prisma. Added `src/lib/db/items.ts` (`getPinnedItems`, `getRecentItems`, `getItemStats`) and moved the demo user email into a shared `src/lib/db/demo-user.ts`. Item rows take their icon, icon background and left border color from the item type. The Pinned section is hidden when there are no pinned items. The Items and Favorite Items stats use real counts. Lint and build pass.
 - Stats & Sidebar (feature/stats-sidebar): replaced mock data in the sidebar with real data from Neon via Prisma. Added `getSidebarItemTypes` to `src/lib/db/items.ts` (system types in a fixed order with per-type item counts), `getSidebarCollections` to `src/lib/db/collections.ts` (shares a `findCollectionSummaries` helper with `getRecentCollections`), and `src/lib/db/users.ts` (`getSidebarUser`) for the footer. The dashboard layout fetches the sidebar data on the server inside a `Suspense` boundary with a new `SidebarSkeleton`. Type labels are capitalized ("Snippets", "Prompts", …) and link to /items/[type]s. Favorite collections keep the star; recent collections show a colored circle for their most-used item type. Added a "View all collections" link to /collections. Main area stats already used real data. `src/lib/mock-data.ts` is no longer used. Lint and build pass.
+- Add Pro Badge to Sidebar (feature/add-pro-badge-sidebar): added a subtle outline shadcn `Badge` reading "PRO" next to the Files and Images types in the sidebar (`src/components/layout/sidebar-nav.tsx`, driven by a `PRO_TYPES` set). Lint and build pass.
