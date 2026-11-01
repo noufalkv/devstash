@@ -9,6 +9,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { CollectionSummary } from "@/lib/db/collections";
 import type { SidebarItemType } from "@/lib/db/items";
@@ -24,6 +25,8 @@ export interface SidebarData {
 interface SidebarNavProps extends SidebarData {
   onNavigate?: () => void;
 }
+
+const PRO_TYPES = new Set(["file", "image"]);
 
 function getTypeLabel(name: string) {
   return `${name.charAt(0).toUpperCase()}${name.slice(1)}s`;
@@ -75,6 +78,14 @@ export function SidebarNav({
                   <span className="flex-1 truncate">
                     {getTypeLabel(type.name)}
                   </span>
+                  {PRO_TYPES.has(type.name) && (
+                    <Badge
+                      variant="outline"
+                      className="h-4 px-1.5 text-[10px] font-semibold tracking-wide text-muted-foreground"
+                    >
+                      PRO
+                    </Badge>
+                  )}
                   <span className="text-xs text-muted-foreground">
                     {type.count}
                   </span>
