@@ -20,7 +20,9 @@ export function ItemRow({ item }: { item: ItemSummary }) {
     >
       <div
         className="flex size-9 shrink-0 items-center justify-center rounded-lg"
-        style={{ backgroundColor: `${color}1a` }}
+        style={{
+          backgroundColor: `color-mix(in srgb, ${color} 10%, transparent)`,
+        }}
       >
         {Icon && (
           <Icon

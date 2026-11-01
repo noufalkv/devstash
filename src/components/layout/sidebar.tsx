@@ -10,11 +10,12 @@ import {
 } from "@/components/ui/sheet";
 
 export function Sidebar(data: SidebarData) {
-  const { open, openMobile, setOpenMobile } = useSidebar();
+  const { open, openMobile, isMobile, setOpenMobile } = useSidebar();
 
   return (
     <>
       <aside
+        inert={!open}
         className={`hidden shrink-0 overflow-hidden border-r border-border transition-[width] duration-200 md:block ${
           open ? "w-64" : "w-0"
         }`}
@@ -24,7 +25,7 @@ export function Sidebar(data: SidebarData) {
         </div>
       </aside>
 
-      <Sheet open={openMobile} onOpenChange={setOpenMobile}>
+      <Sheet open={isMobile && openMobile} onOpenChange={setOpenMobile}>
         <SheetContent side="left" className="w-64 p-0 md:hidden">
           <SheetTitle className="sr-only">Navigation</SheetTitle>
           <SheetDescription className="sr-only">
