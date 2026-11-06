@@ -6,6 +6,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import { ResendVerificationButton } from "@/components/auth/resend-verification-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +14,7 @@ import { Label } from "@/components/ui/label";
 interface RegisterResponse {
   success: boolean;
   error?: string;
+  data?: { requiresVerification: boolean };
 }
 
 function validate(name: string, email: string, password: string, confirmPassword: string) {
@@ -28,6 +30,7 @@ export function RegisterForm() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [verifyEmail, setVerifyEmail] = useState<string | null>(null);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -56,6 +59,10 @@ export function RegisterForm() {
         setError(result.error ?? "Something went wrong. Please try again.");
         return;
       }
+      if (result.data?.requiresVerification) {
+        setVerifyEmail(email.trim().toLowerCase());
+        return;
+      }
       toast.success("Account created. You can now log in.");
       router.push("/sign-in");
     } catch {
@@ -63,6 +70,23 @@ export function RegisterForm() {
     } finally {
       setPending(false);
     }
+  }
+
+  if (verifyEmail) {
+    return (
+      <div className="space-y-4">
+        <p role="status" className="text-sm text-muted-foreground">
+          We sent a verification link to <span className="text-foreground">{verifyEmail}</span>.
+          Click it to activate your account, then sign in.
+        </p>
+        <ResendVerificationButton email={verifyEmail} />
+        <p className="text-center text-sm text-muted-foreground">
+          <Link href="/sign-in" className="text-foreground underline underline-offset-4">
+            Back to sign in
+          </Link>
+        </p>
+      </div>
+    );
   }
 
   return (
