@@ -1,16 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronDown, Folder, Settings, Star } from "lucide-react";
+import { ChevronDown, ChevronsUpDown, Folder, LogOut, Star } from "lucide-react";
 
+import { signOutUser } from "@/actions/auth";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { CollectionSummary } from "@/lib/db/collections";
 import type { SidebarItemType } from "@/lib/db/items";
 import type { SidebarUser } from "@/lib/db/users";
@@ -30,15 +37,6 @@ const PRO_TYPES = new Set(["file", "image"]);
 
 function getTypeLabel(name: string) {
   return `${name.charAt(0).toUpperCase()}${name.slice(1)}s`;
-}
-
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
 }
 
 export function SidebarNav({
@@ -167,20 +165,37 @@ export function SidebarNav({
       </div>
 
       <div className="flex shrink-0 items-center gap-2.5 border-t border-border p-4">
-        <Avatar>
-          <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">{displayName}</p>
-          {user && (
-            <p className="truncate text-xs text-muted-foreground">
-              {user.email}
-            </p>
-          )}
-        </div>
-        <Button variant="ghost" size="icon-sm" aria-label="Settings">
-          <Settings className="size-4" />
-        </Button>
+        <Link
+          href="/profile"
+          onClick={onNavigate}
+          aria-label="Profile"
+          className="flex min-w-0 flex-1 items-center gap-2.5"
+        >
+          <UserAvatar name={displayName} image={user?.image} />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium">{displayName}</p>
+            {user && (
+              <p className="truncate text-xs text-muted-foreground">
+                {user.email}
+              </p>
+            )}
+          </div>
+        </Link>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button variant="ghost" size="icon-sm" aria-label="User menu" />
+            }
+          >
+            <ChevronsUpDown className="size-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="top" align="end" className="w-40">
+            <DropdownMenuItem onClick={() => signOutUser()}>
+              <LogOut className="size-4" />
+              Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );
