@@ -5,6 +5,7 @@ import { z } from "zod";
 import { signIn, signOut } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { sendVerificationEmail } from "@/lib/email";
+import { isEmailVerificationEnabled } from "@/lib/email-verification";
 import { createVerificationToken } from "@/lib/verification-token";
 
 export interface AuthActionResult {
@@ -80,6 +81,8 @@ const resendSchema = z.object({ email: z.email().trim().toLowerCase() });
 export async function resendVerification(email: string): Promise<AuthActionResult> {
   const parsed = resendSchema.safeParse({ email });
   if (!parsed.success) return { success: false, error: "Enter a valid email address" };
+
+  if (!isEmailVerificationEnabled()) return { success: true };
 
   try {
     const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });

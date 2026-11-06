@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import authConfig from "@/auth.config";
+import { isEmailVerificationEnabled } from "@/lib/email-verification";
 
 const credentialsSchema = z.object({
   email: z.email().trim().toLowerCase(),
@@ -41,7 +42,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const valid = await bcrypt.compare(parsed.data.password, user.password);
         if (!valid) return null;
 
-        if (!user.emailVerified && process.env.SKIP_EMAIL_VERIFICATION !== "true") {
+        if (!user.emailVerified && isEmailVerificationEnabled()) {
           throw new EmailNotVerifiedError();
         }
 
