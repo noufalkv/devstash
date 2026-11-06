@@ -6,6 +6,7 @@ import { useActionState } from "react";
 import { signInWithCredentials, signInWithGitHub } from "@/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ResendVerificationButton } from "@/components/auth/resend-verification-button";
 import { Label } from "@/components/ui/label";
 
 interface SignInFormProps {
@@ -56,6 +57,7 @@ export function SignInForm({ callbackUrl, notice }: SignInFormProps) {
         <Button type="submit" className="w-full" disabled={pending}>
           {pending ? "Signing in..." : "Sign in"}
         </Button>
+        {state?.unverifiedEmail && <ResendVerificationButton email={state.unverifiedEmail} />}
       </form>
 
       <div className="flex items-center gap-3 text-xs text-muted-foreground">

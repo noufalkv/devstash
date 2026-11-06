@@ -3,6 +3,8 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
+import { sendVerificationEmail } from "@/lib/email";
+import { createVerificationToken } from "@/lib/verification-token";
 
 const registerSchema = z
   .object({
@@ -50,12 +52,27 @@ export async function POST(request: Request) {
     }
 
     const hashed = await bcrypt.hash(password, 12);
+    const skipVerification = process.env.SKIP_EMAIL_VERIFICATION === "true";
     const user = await prisma.user.create({
-      data: { name, email, password: hashed },
+      data: { name, email, password: hashed, emailVerified: skipVerification ? new Date() : null },
       select: { id: true, name: true, email: true },
     });
 
-    return NextResponse.json({ success: true, data: user }, { status: 201 });
+    if (skipVerification) {
+      return NextResponse.json(
+        { success: true, data: { ...user, requiresVerification: false } },
+        { status: 201 },
+      );
+    }
+
+    // The account exists either way; if sending fails the user can resend from the sign-in page.
+    const token = await createVerificationToken(email);
+    const emailSent = await sendVerificationEmail(email, token);
+
+    return NextResponse.json(
+      { success: true, data: { ...user, requiresVerification: true, emailSent } },
+      { status: 201 },
+    );
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       return NextResponse.json(
