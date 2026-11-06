@@ -1,12 +1,17 @@
 "use server";
 
 import { AuthError, CredentialsSignin } from "next-auth";
+import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { signIn, signOut } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { sendVerificationEmail } from "@/lib/email";
+import { sendPasswordResetEmail, sendVerificationEmail } from "@/lib/email";
 import { isEmailVerificationEnabled } from "@/lib/email-verification";
-import { createVerificationToken } from "@/lib/verification-token";
+import {
+  consumePasswordResetToken,
+  createPasswordResetToken,
+  createVerificationToken,
+} from "@/lib/verification-token";
 
 export interface AuthActionResult {
   success: boolean;
@@ -91,6 +96,73 @@ export async function resendVerification(email: string): Promise<AuthActionResul
       const sent = await sendVerificationEmail(user.email, token);
       if (!sent) return { success: false, error: "Could not send the email. Please try again." };
     }
+    return { success: true };
+  } catch {
+    return { success: false, error: "Something went wrong. Please try again." };
+  }
+}
+
+const forgotPasswordSchema = z.object({ email: z.email("Enter a valid email address").trim().toLowerCase() });
+
+// Always reports success for a valid email so it can't be used to discover accounts.
+export async function requestPasswordReset(
+  _prevState: AuthActionResult | null,
+  formData: FormData,
+): Promise<AuthActionResult> {
+  const parsed = forgotPasswordSchema.safeParse({ email: formData.get("email") });
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message };
+
+  try {
+    const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
+    if (user?.password) {
+      const token = await createPasswordResetToken(user.email);
+      const sent = await sendPasswordResetEmail(user.email, token);
+      if (!sent) return { success: false, error: "Could not send the email. Please try again." };
+    }
+    return { success: true };
+  } catch {
+    return { success: false, error: "Something went wrong. Please try again." };
+  }
+}
+
+const resetPasswordSchema = z
+  .object({
+    email: z.email().trim().toLowerCase(),
+    token: z.string().min(1),
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .max(72, "Password must be at most 72 characters"),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+export async function resetPassword(
+  _prevState: AuthActionResult | null,
+  formData: FormData,
+): Promise<AuthActionResult> {
+  const parsed = resetPasswordSchema.safeParse({
+    email: formData.get("email"),
+    token: formData.get("token"),
+    password: formData.get("password"),
+    confirmPassword: formData.get("confirmPassword"),
+  });
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message };
+
+  try {
+    const result = await consumePasswordResetToken(parsed.data.email, parsed.data.token);
+    if (result !== "valid") {
+      return {
+        success: false,
+        error: "This reset link is invalid or has expired. Request a new one.",
+      };
+    }
+
+    const hashed = await bcrypt.hash(parsed.data.password, 12);
+    await prisma.user.update({ where: { email: parsed.data.email }, data: { password: hashed } });
     return { success: true };
   } catch {
     return { success: false, error: "Something went wrong. Please try again." };
