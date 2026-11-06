@@ -17,7 +17,7 @@ dashboard-collections-spec.md
 dashboard-items-spec.md
 stats-sidebar-spec.md
 add-pro-badge-sidebar.md
-
+auth-spec-files
 
 
 devstash context7 api key
