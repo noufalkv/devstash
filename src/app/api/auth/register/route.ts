@@ -4,6 +4,7 @@ import { z } from "zod";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { sendVerificationEmail } from "@/lib/email";
+import { isEmailVerificationEnabled } from "@/lib/email-verification";
 import { createVerificationToken } from "@/lib/verification-token";
 
 const registerSchema = z
@@ -52,7 +53,7 @@ export async function POST(request: Request) {
     }
 
     const hashed = await bcrypt.hash(password, 12);
-    const skipVerification = process.env.SKIP_EMAIL_VERIFICATION === "true";
+    const skipVerification = !isEmailVerificationEnabled();
     const user = await prisma.user.create({
       data: { name, email, password: hashed, emailVerified: skipVerification ? new Date() : null },
       select: { id: true, name: true, email: true },
