@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 
+import { auth } from "@/auth";
 import { Sidebar } from "@/components/layout/sidebar";
 import { SidebarProvider } from "@/components/layout/sidebar-provider";
 import { SidebarSkeleton } from "@/components/layout/sidebar-skeleton";
@@ -9,10 +10,11 @@ import { getSidebarItemTypes } from "@/lib/db/items";
 import { getSidebarUser } from "@/lib/db/users";
 
 async function DashboardSidebar() {
+  const session = await auth();
   const [itemTypes, collections, user] = await Promise.all([
     getSidebarItemTypes(),
     getSidebarCollections(),
-    getSidebarUser(),
+    session?.user?.id ? getSidebarUser(session.user.id) : null,
   ]);
 
   return <Sidebar itemTypes={itemTypes} collections={collections} user={user} />;
