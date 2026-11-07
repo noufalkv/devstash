@@ -1,6 +1,7 @@
 import { Pin, Star } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import type { ItemSummary } from "@/lib/db/items";
 import { ITEM_TYPE_ICONS } from "@/lib/item-type-icons";
 
@@ -14,8 +15,9 @@ export function ItemRow({ item }: { item: ItemSummary }) {
   const Icon = ITEM_TYPE_ICONS[item.itemType.icon];
 
   return (
-    <div
-      className="flex items-start gap-3 border-b border-l-2 border-border py-3 pl-3 last:border-b-0"
+    <Card
+      size="sm"
+      className="flex-row items-start gap-3 border-l-4 border-l-border px-3"
       style={{ borderLeftColor: color }}
     >
       <div
@@ -60,6 +62,6 @@ export function ItemRow({ item }: { item: ItemSummary }) {
       <span className="shrink-0 text-xs text-muted-foreground">
         {dateFormatter.format(item.createdAt)}
       </span>
-    </div>
+    </Card>
   );
 }
