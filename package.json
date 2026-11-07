@@ -15,7 +15,10 @@
     "db:push": "echo 'Use db:migrate instead - never push directly' && exit 1",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
-    "db:test": "tsx scripts/test-db.ts"
+    "db:test": "tsx scripts/test-db.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "//": {
     "postinstall": "Regenerate Prisma Client after npm install",
@@ -56,11 +59,14 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^3.2.7",
     "eslint": "^9",
     "eslint-config-next": "16.4.2",
     "prisma": "^7.10.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vite-tsconfig-paths": "^6.1.1",
+    "vitest": "^3.2.7"
   }
 }

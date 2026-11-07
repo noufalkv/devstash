@@ -23,6 +23,9 @@ npm run dev     # start dev server (Turbopack, http://localhost:3000)
 npm run build   # production build
 npm run start   # run production build
 npm run lint    # eslint (flat config, eslint.config.mjs)
+npm test        # vitest run (unit tests, once)
+npm run test:watch     # vitest in watch mode
+npm run test:coverage  # vitest run with v8 coverage (src/actions and src/lib)
 ```
 
 ### Database (Prisma 7 + Neon)
@@ -55,7 +58,9 @@ When using any Neon MCP tool (`run_sql`, `get_database_tables`, `describe_table_
 - Schema changes go through Prisma migrations (`npm run db:migrate`), not the MCP. Use the MCP for reading and inspecting data.
 - If a task seems to need production, or you can't tell which branch a call will hit, stop and ask.
 
-There is no test runner configured yet — no test script, framework, or test files exist in the repo.
+## Testing
+
+Vitest (node environment, config in `vitest.config.ts`, `@/*` alias via `vite-tsconfig-paths`). Only server actions (`src/actions`) and utilities (`src/lib`) are unit tested; do not test components. Tests live next to the source as `*.test.ts`. Mock Prisma, `@/auth`, email and rate-limit modules with `vi.mock` + `vi.hoisted`; tests never touch the database. `next-auth` is mocked in action tests because its entry imports `next/server`, which doesn't resolve under Vitest.
 
 ## Architecture
 
