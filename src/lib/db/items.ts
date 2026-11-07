@@ -20,6 +20,17 @@ export interface ItemSummary {
   tags: string[];
 }
 
+export interface ItemDetail extends ItemSummary {
+  contentType: "TEXT" | "FILE" | "URL";
+  content: string | null;
+  language: string | null;
+  url: string | null;
+  fileName: string | null;
+  fileSize: number | null;
+  updatedAt: Date;
+  collections: { id: string; name: string }[];
+}
+
 export interface ItemStats {
   total: number;
   favorites: number;
@@ -77,6 +88,41 @@ export function getRecentItems(limit = 10): Promise<ItemSummary[]> {
 
 export function getItemsByType(typeName: string): Promise<ItemSummary[]> {
   return findItemSummaries({ where: { itemType: { name: typeName } } });
+}
+
+// Readable by its owner, and (until dashboard queries use the session) by anyone for demo items.
+export async function getItemDetail(
+  id: string,
+  userId?: string,
+): Promise<ItemDetail | null> {
+  const owners: Prisma.UserWhereInput[] = [{ email: DEMO_USER_EMAIL }];
+  if (userId) owners.push({ id: userId });
+
+  const item = await prisma.item.findFirst({
+    where: { id, user: { OR: owners } },
+    select: {
+      ...itemSummarySelect,
+      contentType: true,
+      content: true,
+      language: true,
+      url: true,
+      fileName: true,
+      fileSize: true,
+      updatedAt: true,
+      collections: {
+        select: { collection: { select: { id: true, name: true } } },
+        orderBy: { collection: { name: "asc" } },
+      },
+    },
+  });
+  if (!item) return null;
+
+  const { tags, collections, ...rest } = item;
+  return {
+    ...rest,
+    tags: tags.map((tag) => tag.name),
+    collections: collections.map((c) => c.collection),
+  };
 }
 
 export async function getItemStats(): Promise<ItemStats> {

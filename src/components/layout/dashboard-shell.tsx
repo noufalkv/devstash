@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 
 import { auth } from "@/auth";
+import { ItemDrawerProvider } from "@/components/items/item-drawer-provider";
 import { Sidebar } from "@/components/layout/sidebar";
 import { SidebarProvider } from "@/components/layout/sidebar-provider";
 import { SidebarSkeleton } from "@/components/layout/sidebar-skeleton";
@@ -29,7 +30,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           <Suspense fallback={<SidebarSkeleton />}>
             <DashboardSidebar />
           </Suspense>
-          <main className="flex-1 p-6">{children}</main>
+          <main className="flex-1 p-6">
+            <ItemDrawerProvider>{children}</ItemDrawerProvider>
+          </main>
         </div>
       </div>
     </SidebarProvider>
