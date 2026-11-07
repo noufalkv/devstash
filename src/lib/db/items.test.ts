@@ -1,11 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { findFirst } = vi.hoisted(() => ({ findFirst: vi.fn() }));
+const { findFirst, findMany, count } = vi.hoisted(() => ({
+  findFirst: vi.fn(),
+  findMany: vi.fn(),
+  count: vi.fn(),
+}));
 
-vi.mock("@/lib/prisma", () => ({ prisma: { item: { findFirst } } }));
+vi.mock("@/lib/prisma", () => ({ prisma: { item: { findFirst, findMany, count } } }));
 
-import { DEMO_USER_EMAIL } from "@/lib/db/demo-user";
-import { getItemDetail } from "@/lib/db/items";
+import {
+  getItemDetail,
+  getItemStats,
+  getItemsByType,
+  getPinnedItems,
+} from "@/lib/db/items";
 
 const createdAt = new Date("2024-01-15T00:00:00Z");
 
@@ -53,25 +61,49 @@ describe("getItemDetail", () => {
     await expect(getItemDetail("missing", "user-1")).resolves.toBeNull();
   });
 
-  it("scopes to the signed-in user and the demo user", async () => {
+  it("scopes to the signed-in user's own items", async () => {
     findFirst.mockResolvedValue(null);
 
     await getItemDetail("item-1", "user-1");
 
     expect(findFirst.mock.calls[0][0].where).toEqual({
       id: "item-1",
-      user: { OR: [{ email: DEMO_USER_EMAIL }, { id: "user-1" }] },
+      userId: "user-1",
+    });
+  });
+});
+
+describe("user scoping", () => {
+  beforeEach(() => {
+    findMany.mockReset().mockResolvedValue([]);
+    count.mockReset().mockResolvedValue(0);
+  });
+
+  it("filters pinned items by user id", async () => {
+    await getPinnedItems("user-1");
+
+    expect(findMany.mock.calls[0][0].where).toEqual({
+      isPinned: true,
+      userId: "user-1",
     });
   });
 
-  it("scopes to the demo user only when signed out", async () => {
-    findFirst.mockResolvedValue(null);
+  it("filters items by type and user id", async () => {
+    await getItemsByType("user-1", "snippet");
 
-    await getItemDetail("item-1");
+    expect(findMany.mock.calls[0][0].where).toEqual({
+      itemType: { name: "snippet" },
+      userId: "user-1",
+    });
+  });
 
-    expect(findFirst.mock.calls[0][0].where).toEqual({
-      id: "item-1",
-      user: { OR: [{ email: DEMO_USER_EMAIL }] },
+  it("counts only the user's items", async () => {
+    await getItemStats("user-1");
+
+    expect(count.mock.calls[0][0].where).toEqual({ userId: "user-1" });
+    expect(count.mock.calls[1][0].where).toEqual({
+      userId: "user-1",
+      isFavorite: true,
     });
   });
 });

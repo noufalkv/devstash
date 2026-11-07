@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { auth } from "@/auth";
@@ -7,15 +8,18 @@ import { SidebarProvider } from "@/components/layout/sidebar-provider";
 import { SidebarSkeleton } from "@/components/layout/sidebar-skeleton";
 import { TopBar } from "@/components/layout/top-bar";
 import { getSidebarCollections } from "@/lib/db/collections";
-import { getSidebarItemTypes } from "@/lib/db/items";
+import { getUserItemTypeCounts } from "@/lib/db/items";
 import { getSidebarUser } from "@/lib/db/users";
 
 async function DashboardSidebar() {
   const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) redirect("/sign-in");
+
   const [itemTypes, collections, user] = await Promise.all([
-    getSidebarItemTypes(),
-    getSidebarCollections(),
-    session?.user?.id ? getSidebarUser(session.user.id) : null,
+    getUserItemTypeCounts(userId),
+    getSidebarCollections(userId),
+    getSidebarUser(userId),
   ]);
 
   return <Sidebar itemTypes={itemTypes} collections={collections} user={user} />;

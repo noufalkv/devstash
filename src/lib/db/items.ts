@@ -1,5 +1,4 @@
 import type { Prisma } from "@/generated/prisma/client";
-import { DEMO_USER_EMAIL } from "@/lib/db/demo-user";
 import { prisma } from "@/lib/prisma";
 
 export interface ItemSummaryType {
@@ -63,10 +62,11 @@ const itemSummarySelect = {
 } satisfies Prisma.ItemSelect;
 
 async function findItemSummaries(
+  userId: string,
   args: Pick<Prisma.ItemFindManyArgs, "where" | "take">,
 ): Promise<ItemSummary[]> {
   const items = await prisma.item.findMany({
-    where: { ...args.where, user: { email: DEMO_USER_EMAIL } },
+    where: { ...args.where, userId },
     orderBy: { createdAt: "desc" },
     take: args.take,
     select: itemSummarySelect,
@@ -78,28 +78,34 @@ async function findItemSummaries(
   }));
 }
 
-export function getPinnedItems(limit = 10): Promise<ItemSummary[]> {
-  return findItemSummaries({ where: { isPinned: true }, take: limit });
+export function getPinnedItems(
+  userId: string,
+  limit = 10,
+): Promise<ItemSummary[]> {
+  return findItemSummaries(userId, { where: { isPinned: true }, take: limit });
 }
 
-export function getRecentItems(limit = 10): Promise<ItemSummary[]> {
-  return findItemSummaries({ take: limit });
+export function getRecentItems(
+  userId: string,
+  limit = 10,
+): Promise<ItemSummary[]> {
+  return findItemSummaries(userId, { take: limit });
 }
 
-export function getItemsByType(typeName: string): Promise<ItemSummary[]> {
-  return findItemSummaries({ where: { itemType: { name: typeName } } });
+export function getItemsByType(
+  userId: string,
+  typeName: string,
+): Promise<ItemSummary[]> {
+  return findItemSummaries(userId, { where: { itemType: { name: typeName } } });
 }
 
-// Readable by its owner, and (until dashboard queries use the session) by anyone for demo items.
+// Readable only by its owner
 export async function getItemDetail(
   id: string,
-  userId?: string,
+  userId: string,
 ): Promise<ItemDetail | null> {
-  const owners: Prisma.UserWhereInput[] = [{ email: DEMO_USER_EMAIL }];
-  if (userId) owners.push({ id: userId });
-
   const item = await prisma.item.findFirst({
-    where: { id, user: { OR: owners } },
+    where: { id, userId },
     select: {
       ...itemSummarySelect,
       contentType: true,
@@ -125,8 +131,8 @@ export async function getItemDetail(
   };
 }
 
-export async function getItemStats(): Promise<ItemStats> {
-  const where = { user: { email: DEMO_USER_EMAIL } };
+export async function getItemStats(userId: string): Promise<ItemStats> {
+  const where = { userId };
   const [total, favorites] = await Promise.all([
     prisma.item.count({ where }),
     prisma.item.count({ where: { ...where, isFavorite: true } }),
@@ -160,10 +166,6 @@ async function findItemTypeCounts(
       (a, b) =>
         SYSTEM_TYPE_ORDER.indexOf(a.name) - SYSTEM_TYPE_ORDER.indexOf(b.name),
     );
-}
-
-export function getSidebarItemTypes(): Promise<SidebarItemType[]> {
-  return findItemTypeCounts({ user: { email: DEMO_USER_EMAIL } });
 }
 
 export function getUserItemTypeCounts(userId: string): Promise<SidebarItemType[]> {
