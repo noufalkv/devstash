@@ -3,7 +3,6 @@ import { FolderOpen, Heart, LayoutGrid, Pin, Star } from "lucide-react";
 import { CollectionCard } from "@/components/dashboard/collection-card";
 import { ItemRow } from "@/components/dashboard/item-row";
 import { StatCard } from "@/components/dashboard/stat-card";
-import { Card, CardContent } from "@/components/ui/card";
 import { getCollectionStats, getRecentCollections } from "@/lib/db/collections";
 import { getItemStats, getPinnedItems, getRecentItems } from "@/lib/db/items";
 
@@ -59,25 +58,21 @@ export default async function DashboardPage() {
             <Pin className="size-4 text-muted-foreground" />
             <h2 className="text-xl font-semibold">Pinned</h2>
           </div>
-          <Card>
-            <CardContent className="flex flex-col">
-              {pinnedItems.map((item) => (
-                <ItemRow key={item.id} item={item} />
-              ))}
-            </CardContent>
-          </Card>
+          <div className="flex flex-col gap-3">
+            {pinnedItems.map((item) => (
+              <ItemRow key={item.id} item={item} />
+            ))}
+          </div>
         </section>
       )}
 
       <section className="flex flex-col gap-4">
         <h2 className="text-xl font-semibold">Recent Items</h2>
-        <Card>
-          <CardContent className="flex flex-col">
-            {recentItems.map((item) => (
-              <ItemRow key={item.id} item={item} />
-            ))}
-          </CardContent>
-        </Card>
+        <div className="flex flex-col gap-3">
+          {recentItems.map((item) => (
+            <ItemRow key={item.id} item={item} />
+          ))}
+        </div>
       </section>
     </div>
   );
