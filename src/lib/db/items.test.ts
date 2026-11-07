@@ -1,20 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { findFirst, findMany, count, update } = vi.hoisted(() => ({
+const { findFirst, findMany, count, update, remove } = vi.hoisted(() => ({
   findFirst: vi.fn(),
   findMany: vi.fn(),
   count: vi.fn(),
   update: vi.fn(),
+  remove: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
-  prisma: { item: { findFirst, findMany, count, update } },
+  prisma: { item: { findFirst, findMany, count, update, delete: remove } },
 }));
 
 import {
   getItemDetail,
   getItemStats,
   getItemsByType,
+  deleteItem,
   getPinnedItems,
   updateItem,
 } from "@/lib/db/items";
@@ -165,5 +167,32 @@ describe("updateItem", () => {
     update.mockRejectedValue(new Error("db down"));
 
     await expect(updateItem("item-1", "user-1", data)).rejects.toThrow("db down");
+  });
+});
+
+describe("deleteItem", () => {
+  beforeEach(() => {
+    remove.mockReset();
+  });
+
+  it("scopes the delete to the owner", async () => {
+    remove.mockResolvedValue(row);
+
+    await expect(deleteItem("item-1", "user-1")).resolves.toBe(true);
+    expect(remove).toHaveBeenCalledWith({
+      where: { id: "item-1", userId: "user-1" },
+    });
+  });
+
+  it("returns false when the item is not found or not owned", async () => {
+    remove.mockRejectedValue({ code: "P2025" });
+
+    await expect(deleteItem("item-1", "user-2")).resolves.toBe(false);
+  });
+
+  it("rethrows other errors", async () => {
+    remove.mockRejectedValue(new Error("db down"));
+
+    await expect(deleteItem("item-1", "user-1")).rejects.toThrow("db down");
   });
 });

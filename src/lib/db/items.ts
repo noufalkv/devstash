@@ -176,6 +176,17 @@ export async function updateItem(
   }
 }
 
+// Deletable only by its owner; returns false when the item is not found
+export async function deleteItem(id: string, userId: string): Promise<boolean> {
+  try {
+    await prisma.item.delete({ where: { id, userId } });
+    return true;
+  } catch (error) {
+    if (isRecordNotFound(error)) return false;
+    throw error;
+  }
+}
+
 function isRecordNotFound(error: unknown): boolean {
   return (
     typeof error === "object" &&

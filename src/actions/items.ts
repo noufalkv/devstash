@@ -2,7 +2,11 @@
 
 import { z } from "zod";
 import { auth } from "@/auth";
-import { updateItem as updateItemQuery, type ItemDetail } from "@/lib/db/items";
+import {
+  deleteItem as deleteItemQuery,
+  updateItem as updateItemQuery,
+  type ItemDetail,
+} from "@/lib/db/items";
 
 export interface ItemActionResult<T> {
   success: boolean;
@@ -49,6 +53,22 @@ export async function updateItem(
     const item = await updateItemQuery(itemId, session.user.id, parsed.data);
     if (!item) return { success: false, error: "Item not found" };
     return { success: true, data: item };
+  } catch {
+    return { success: false, error: "Something went wrong. Please try again." };
+  }
+}
+
+export async function deleteItem(itemId: unknown): Promise<ItemActionResult<void>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "You must be signed in" };
+
+  const parsed = z.string().min(1).safeParse(itemId);
+  if (!parsed.success) return { success: false, error: "Invalid item" };
+
+  try {
+    const deleted = await deleteItemQuery(parsed.data, session.user.id);
+    if (!deleted) return { success: false, error: "Item not found" };
+    return { success: true };
   } catch {
     return { success: false, error: "Something went wrong. Please try again." };
   }
