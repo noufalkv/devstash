@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Layers, PanelLeft, Plus, Search } from "lucide-react";
+import { Layers, PanelLeft, Search } from "lucide-react";
 
+import { NewItemDialog } from "@/components/items/new-item-dialog";
 import { useSidebar } from "@/components/layout/sidebar-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,10 +37,7 @@ export function TopBar() {
         />
       </div>
 
-      <Button disabled>
-        <Plus />
-        New Item
-      </Button>
+      <NewItemDialog />
     </header>
   );
 }

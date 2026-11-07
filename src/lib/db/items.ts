@@ -146,6 +146,41 @@ export interface UpdateItemData {
   tags: string[];
 }
 
+export interface CreateItemData extends UpdateItemData {
+  type: string;
+}
+
+// Returns null when the system item type does not exist
+export async function createItem(
+  userId: string,
+  data: CreateItemData,
+): Promise<ItemDetail | null> {
+  const { type, tags, ...fields } = data;
+
+  const itemType = await prisma.itemType.findFirst({
+    where: { name: type, isSystem: true, userId: null },
+    select: { id: true },
+  });
+  if (!itemType) return null;
+
+  const item = await prisma.item.create({
+    data: {
+      ...fields,
+      contentType: type === "link" ? "URL" : "TEXT",
+      userId,
+      itemTypeId: itemType.id,
+      tags: {
+        connectOrCreate: tags.map((name) => ({
+          where: { name },
+          create: { name },
+        })),
+      },
+    },
+    select: itemDetailSelect,
+  });
+  return toItemDetail(item);
+}
+
 // Writable only by its owner; returns null when the item is not found
 export async function updateItem(
   id: string,

@@ -3,6 +3,13 @@
 import { z } from "zod";
 import { auth } from "@/auth";
 import {
+  CONTENT_TYPES,
+  CREATABLE_ITEM_TYPES,
+  LANGUAGE_TYPES,
+  URL_TYPES,
+} from "@/lib/item-fields";
+import {
+  createItem as createItemQuery,
   deleteItem as deleteItemQuery,
   updateItem as updateItemQuery,
   type ItemDetail,
@@ -38,6 +45,39 @@ const updateItemSchema = z.object({
       ...new Set(tags.map((tag) => tag.trim()).filter(Boolean)),
     ]),
 });
+
+const createItemSchema = updateItemSchema
+  .extend({ type: z.enum(CREATABLE_ITEM_TYPES) })
+  .superRefine((data, ctx) => {
+    if (URL_TYPES.has(data.type) && !data.url) {
+      ctx.addIssue({ code: "custom", path: ["url"], message: "URL is required" });
+    }
+  })
+  .transform((data) => ({
+    ...data,
+    // Fields the type does not use are dropped
+    content: CONTENT_TYPES.has(data.type) ? data.content : null,
+    language: LANGUAGE_TYPES.has(data.type) ? data.language : null,
+    url: URL_TYPES.has(data.type) ? data.url : null,
+  }));
+
+export async function createItem(
+  data: unknown,
+): Promise<ItemActionResult<ItemDetail>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "You must be signed in" };
+
+  const parsed = createItemSchema.safeParse(data);
+  if (!parsed.success) return { success: false, error: parsed.error.issues[0].message };
+
+  try {
+    const item = await createItemQuery(session.user.id, parsed.data);
+    if (!item) return { success: false, error: "Unknown item type" };
+    return { success: true, data: item };
+  } catch {
+    return { success: false, error: "Something went wrong. Please try again." };
+  }
+}
 
 export async function updateItem(
   itemId: string,
