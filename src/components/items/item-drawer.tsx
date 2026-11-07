@@ -10,8 +10,10 @@ import {
   Tag,
   Trash2,
 } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 
+import { ItemEditForm } from "@/components/items/item-edit-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -112,7 +114,14 @@ function SectionLabel({
   );
 }
 
-function ItemDetailView({ item }: { item: ItemDetailJson }) {
+function ItemDetailView({
+  item,
+  onUpdated,
+}: {
+  item: ItemDetailJson;
+  onUpdated: (item: ItemDetailJson) => void;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
   const { color } = item.itemType;
   const Icon = ITEM_TYPE_ICONS[item.itemType.icon];
   const copyText = getCopyText(item);
@@ -125,6 +134,19 @@ function ItemDetailView({ item }: { item: ItemDetailJson }) {
     } catch {
       toast.error("Could not copy to clipboard");
     }
+  }
+
+  if (isEditing) {
+    return (
+      <ItemEditForm
+        item={item}
+        onCancel={() => setIsEditing(false)}
+        onSaved={(updated) => {
+          onUpdated(updated);
+          setIsEditing(false);
+        }}
+      />
+    );
   }
 
   return (
@@ -170,7 +192,11 @@ function ItemDetailView({ item }: { item: ItemDetailJson }) {
             <ActionButton icon={Copy} label="Copy" onClick={handleCopy} />
           )}
           <div className="ml-auto flex items-center gap-1">
-            <ActionButton icon={Pencil} label="Edit" />
+            <ActionButton
+              icon={Pencil}
+              label="Edit"
+              onClick={() => setIsEditing(true)}
+            />
             <Button
               variant="ghost"
               size="icon-sm"
@@ -279,15 +305,19 @@ export function ItemDrawer({
   open,
   state,
   onOpenChange,
+  onItemUpdated,
 }: {
   open: boolean;
   state: DrawerState;
   onOpenChange: (open: boolean) => void;
+  onItemUpdated: (item: ItemDetailJson) => void;
 }) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="gap-0 data-[side=right]:sm:max-w-xl">
-        {state.status === "ready" && <ItemDetailView item={state.item} />}
+        {state.status === "ready" && (
+          <ItemDetailView item={state.item} onUpdated={onItemUpdated} />
+        )}
         {state.status === "loading" && (
           <>
             <SheetHeader className="sr-only">

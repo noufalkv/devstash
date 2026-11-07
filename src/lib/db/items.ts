@@ -99,6 +99,32 @@ export function getItemsByType(
   return findItemSummaries(userId, { where: { itemType: { name: typeName } } });
 }
 
+const itemDetailSelect = {
+  ...itemSummarySelect,
+  contentType: true,
+  content: true,
+  language: true,
+  url: true,
+  fileName: true,
+  fileSize: true,
+  updatedAt: true,
+  collections: {
+    select: { collection: { select: { id: true, name: true } } },
+    orderBy: { collection: { name: "asc" } },
+  },
+} satisfies Prisma.ItemSelect;
+
+function toItemDetail(
+  item: Prisma.ItemGetPayload<{ select: typeof itemDetailSelect }>,
+): ItemDetail {
+  const { tags, collections, ...rest } = item;
+  return {
+    ...rest,
+    tags: tags.map((tag) => tag.name),
+    collections: collections.map((c) => c.collection),
+  };
+}
+
 // Readable only by its owner
 export async function getItemDetail(
   id: string,
@@ -106,29 +132,57 @@ export async function getItemDetail(
 ): Promise<ItemDetail | null> {
   const item = await prisma.item.findFirst({
     where: { id, userId },
-    select: {
-      ...itemSummarySelect,
-      contentType: true,
-      content: true,
-      language: true,
-      url: true,
-      fileName: true,
-      fileSize: true,
-      updatedAt: true,
-      collections: {
-        select: { collection: { select: { id: true, name: true } } },
-        orderBy: { collection: { name: "asc" } },
-      },
-    },
+    select: itemDetailSelect,
   });
-  if (!item) return null;
+  return item ? toItemDetail(item) : null;
+}
 
-  const { tags, collections, ...rest } = item;
-  return {
-    ...rest,
-    tags: tags.map((tag) => tag.name),
-    collections: collections.map((c) => c.collection),
-  };
+export interface UpdateItemData {
+  title: string;
+  description: string | null;
+  content: string | null;
+  url: string | null;
+  language: string | null;
+  tags: string[];
+}
+
+// Writable only by its owner; returns null when the item is not found
+export async function updateItem(
+  id: string,
+  userId: string,
+  data: UpdateItemData,
+): Promise<ItemDetail | null> {
+  const { tags, ...fields } = data;
+
+  try {
+    const item = await prisma.item.update({
+      where: { id, userId },
+      data: {
+        ...fields,
+        tags: {
+          set: [],
+          connectOrCreate: tags.map((name) => ({
+            where: { name },
+            create: { name },
+          })),
+        },
+      },
+      select: itemDetailSelect,
+    });
+    return toItemDetail(item);
+  } catch (error) {
+    if (isRecordNotFound(error)) return null;
+    throw error;
+  }
+}
+
+function isRecordNotFound(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "P2025"
+  );
 }
 
 export async function getItemStats(userId: string): Promise<ItemStats> {

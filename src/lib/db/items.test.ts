@@ -1,18 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { findFirst, findMany, count } = vi.hoisted(() => ({
+const { findFirst, findMany, count, update } = vi.hoisted(() => ({
   findFirst: vi.fn(),
   findMany: vi.fn(),
   count: vi.fn(),
+  update: vi.fn(),
 }));
 
-vi.mock("@/lib/prisma", () => ({ prisma: { item: { findFirst, findMany, count } } }));
+vi.mock("@/lib/prisma", () => ({
+  prisma: { item: { findFirst, findMany, count, update } },
+}));
 
 import {
   getItemDetail,
   getItemStats,
   getItemsByType,
   getPinnedItems,
+  updateItem,
 } from "@/lib/db/items";
 
 const createdAt = new Date("2024-01-15T00:00:00Z");
@@ -105,5 +109,61 @@ describe("user scoping", () => {
       userId: "user-1",
       isFavorite: true,
     });
+  });
+});
+
+describe("updateItem", () => {
+  const data = {
+    title: "useAuth Hook",
+    description: null,
+    content: "const a = 1;",
+    url: null,
+    language: "typescript",
+    tags: ["auth", "react"],
+  };
+
+  beforeEach(() => {
+    update.mockReset();
+  });
+
+  it("scopes the update to the owner and replaces tags", async () => {
+    update.mockResolvedValue(row);
+
+    await updateItem("item-1", "user-1", data);
+
+    const args = update.mock.calls[0][0];
+    expect(args.where).toEqual({ id: "item-1", userId: "user-1" });
+    expect(args.data.title).toBe("useAuth Hook");
+    expect(args.data.tags).toEqual({
+      set: [],
+      connectOrCreate: [
+        { where: { name: "auth" }, create: { name: "auth" } },
+        { where: { name: "react" }, create: { name: "react" } },
+      ],
+    });
+  });
+
+  it("returns the flattened updated item", async () => {
+    update.mockResolvedValue(row);
+
+    const item = await updateItem("item-1", "user-1", data);
+
+    expect(item).toMatchObject({
+      id: "item-1",
+      tags: ["auth", "react"],
+      collections: [{ id: "col-1", name: "React Patterns" }],
+    });
+  });
+
+  it("returns null when the item is not found or not owned", async () => {
+    update.mockRejectedValue({ code: "P2025" });
+
+    await expect(updateItem("item-1", "user-2", data)).resolves.toBeNull();
+  });
+
+  it("rethrows other errors", async () => {
+    update.mockRejectedValue(new Error("db down"));
+
+    await expect(updateItem("item-1", "user-1", data)).rejects.toThrow("db down");
   });
 });

@@ -64,7 +64,12 @@ export function ItemDrawerProvider({ children }: { children: React.ReactNode }) 
   return (
     <ItemDrawerContext.Provider value={{ openItem }}>
       {children}
-      <ItemDrawer open={open} state={state} onOpenChange={handleOpenChange} />
+      <ItemDrawer
+        open={open}
+        state={state}
+        onOpenChange={handleOpenChange}
+        onItemUpdated={(item) => setState({ status: "ready", item })}
+      />
     </ItemDrawerContext.Provider>
   );
 }
