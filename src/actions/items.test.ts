@@ -4,15 +4,17 @@ const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
   updateItem: vi.fn(),
   deleteItem: vi.fn(),
+  createItem: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
 vi.mock("@/lib/db/items", () => ({
   updateItem: mocks.updateItem,
   deleteItem: mocks.deleteItem,
+  createItem: mocks.createItem,
 }));
 
-import { deleteItem, updateItem } from "./items";
+import { createItem, deleteItem, updateItem } from "./items";
 
 const validData = {
   title: "  useAuth Hook  ",
@@ -154,6 +156,112 @@ describe("deleteItem", () => {
     mocks.deleteItem.mockRejectedValue(new Error("db down"));
 
     expect(await deleteItem("item-1")).toEqual({
+      success: false,
+      error: "Something went wrong. Please try again.",
+    });
+  });
+});
+
+describe("createItem", () => {
+  const snippet = {
+    type: "snippet",
+    title: "  useAuth Hook  ",
+    description: " ",
+    content: "const a = 1;",
+    language: "typescript",
+    url: "",
+    tags: [" react ", "auth", "auth", ""],
+  };
+
+  beforeEach(() => {
+    mocks.createItem.mockResolvedValue(updatedItem);
+  });
+
+  it("requires a session", async () => {
+    mocks.auth.mockResolvedValue(null);
+
+    expect(await createItem(snippet)).toEqual({
+      success: false,
+      error: "You must be signed in",
+    });
+    expect(mocks.createItem).not.toHaveBeenCalled();
+  });
+
+  it("rejects an empty title", async () => {
+    const result = await createItem({ ...snippet, title: "   " });
+
+    expect(result).toEqual({ success: false, error: "Title is required" });
+    expect(mocks.createItem).not.toHaveBeenCalled();
+  });
+
+  it("rejects types that cannot be created here", async () => {
+    const result = await createItem({ ...snippet, type: "file" });
+
+    expect(result.success).toBe(false);
+    expect(mocks.createItem).not.toHaveBeenCalled();
+  });
+
+  it("requires a URL for links", async () => {
+    const result = await createItem({ ...snippet, type: "link", url: "  " });
+
+    expect(result).toEqual({ success: false, error: "URL is required" });
+    expect(mocks.createItem).not.toHaveBeenCalled();
+  });
+
+  it("rejects an invalid link URL", async () => {
+    const result = await createItem({ ...snippet, type: "link", url: "nope" });
+
+    expect(result).toEqual({ success: false, error: "URL is not valid" });
+  });
+
+  it("saves normalized data for the signed-in user", async () => {
+    const result = await createItem(snippet);
+
+    expect(result).toEqual({ success: true, data: updatedItem });
+    expect(mocks.createItem).toHaveBeenCalledWith("u1", {
+      type: "snippet",
+      title: "useAuth Hook",
+      description: null,
+      content: "const a = 1;",
+      language: "typescript",
+      url: null,
+      tags: ["react", "auth"],
+    });
+  });
+
+  it("drops fields the type does not use", async () => {
+    await createItem({ ...snippet, type: "note" });
+    await createItem({
+      ...snippet,
+      type: "link",
+      url: "https://example.com",
+    });
+
+    expect(mocks.createItem.mock.calls[0][1]).toMatchObject({
+      content: "const a = 1;",
+      language: null,
+      url: null,
+    });
+    expect(mocks.createItem.mock.calls[1][1]).toMatchObject({
+      content: null,
+      language: null,
+      url: "https://example.com",
+    });
+  });
+
+  it("reports an unknown item type", async () => {
+    mocks.createItem.mockResolvedValue(null);
+
+    expect(await createItem(snippet)).toEqual({
+      success: false,
+      error: "Unknown item type",
+    });
+  });
+
+  it("returns a friendly error on unexpected failure", async () => {
+    mocks.createItem.mockRejectedValue(new Error("db down"));
+
+    expect(await createItem(snippet)).toEqual({
       success: false,
       error: "Something went wrong. Please try again.",
     });

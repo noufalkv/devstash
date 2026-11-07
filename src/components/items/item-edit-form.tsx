@@ -13,11 +13,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  CONTENT_TYPES,
+  LANGUAGE_TYPES,
+  URL_TYPES,
+} from "@/lib/item-fields";
 import { ITEM_TYPE_ICONS } from "@/lib/item-type-icons";
-
-const CONTENT_TYPES = new Set(["snippet", "prompt", "command", "note"]);
-const LANGUAGE_TYPES = new Set(["snippet", "command"]);
-const URL_TYPES = new Set(["link"]);
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
   year: "numeric",

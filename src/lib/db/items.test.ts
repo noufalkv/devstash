@@ -1,18 +1,25 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { findFirst, findMany, count, update, remove } = vi.hoisted(() => ({
-  findFirst: vi.fn(),
-  findMany: vi.fn(),
-  count: vi.fn(),
-  update: vi.fn(),
-  remove: vi.fn(),
-}));
+const { findFirst, findMany, count, update, remove, create, findType } =
+  vi.hoisted(() => ({
+    findFirst: vi.fn(),
+    findMany: vi.fn(),
+    count: vi.fn(),
+    update: vi.fn(),
+    remove: vi.fn(),
+    create: vi.fn(),
+    findType: vi.fn(),
+  }));
 
 vi.mock("@/lib/prisma", () => ({
-  prisma: { item: { findFirst, findMany, count, update, delete: remove } },
+  prisma: {
+    item: { findFirst, findMany, count, update, delete: remove, create },
+    itemType: { findFirst: findType },
+  },
 }));
 
 import {
+  createItem,
   getItemDetail,
   getItemStats,
   getItemsByType,
@@ -194,5 +201,76 @@ describe("deleteItem", () => {
     remove.mockRejectedValue(new Error("db down"));
 
     await expect(deleteItem("item-1", "user-1")).rejects.toThrow("db down");
+  });
+});
+
+describe("createItem", () => {
+  const data = {
+    type: "snippet",
+    title: "useAuth Hook",
+    description: null,
+    content: "const a = 1;",
+    url: null,
+    language: "typescript",
+    tags: ["auth", "react"],
+  };
+
+  beforeEach(() => {
+    create.mockReset();
+    findType.mockReset();
+    findType.mockResolvedValue({ id: "type-1" });
+    create.mockResolvedValue(row);
+  });
+
+  it("looks up the system type and creates a TEXT item for the user", async () => {
+    await createItem("user-1", data);
+
+    expect(findType).toHaveBeenCalledWith({
+      where: { name: "snippet", isSystem: true, userId: null },
+      select: { id: true },
+    });
+    const args = create.mock.calls[0][0];
+    expect(args.data).toMatchObject({
+      title: "useAuth Hook",
+      content: "const a = 1;",
+      contentType: "TEXT",
+      userId: "user-1",
+      itemTypeId: "type-1",
+    });
+    expect(args.data).not.toHaveProperty("type");
+    expect(args.data.tags).toEqual({
+      connectOrCreate: [
+        { where: { name: "auth" }, create: { name: "auth" } },
+        { where: { name: "react" }, create: { name: "react" } },
+      ],
+    });
+  });
+
+  it("creates links with the URL content type", async () => {
+    await createItem("user-1", {
+      ...data,
+      type: "link",
+      content: null,
+      url: "https://example.com",
+    });
+
+    expect(create.mock.calls[0][0].data.contentType).toBe("URL");
+  });
+
+  it("returns the flattened created item", async () => {
+    const item = await createItem("user-1", data);
+
+    expect(item).toMatchObject({
+      id: "item-1",
+      tags: ["auth", "react"],
+      collections: [{ id: "col-1", name: "React Patterns" }],
+    });
+  });
+
+  it("returns null without creating when the type does not exist", async () => {
+    findType.mockResolvedValue(null);
+
+    await expect(createItem("user-1", data)).resolves.toBeNull();
+    expect(create).not.toHaveBeenCalled();
   });
 });
