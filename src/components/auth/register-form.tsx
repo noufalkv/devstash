@@ -56,6 +56,7 @@ export function RegisterForm() {
       });
       const result: RegisterResponse = await response.json();
       if (!result.success) {
+        if (response.status === 429 && result.error) toast.error(result.error);
         setError(result.error ?? "Something went wrong. Please try again.");
         return;
       }

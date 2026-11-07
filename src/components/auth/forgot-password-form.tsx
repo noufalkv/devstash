@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { toast } from "sonner";
 
 import { requestPasswordReset } from "@/actions/auth";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,10 @@ import { Label } from "@/components/ui/label";
 
 export function ForgotPasswordForm() {
   const [state, formAction, pending] = useActionState(requestPasswordReset, null);
+
+  useEffect(() => {
+    if (state?.rateLimited && state.error) toast.error(state.error);
+  }, [state]);
 
   if (state?.success) {
     return (
