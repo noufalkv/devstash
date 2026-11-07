@@ -3,12 +3,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
   updateItem: vi.fn(),
+  deleteItem: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
-vi.mock("@/lib/db/items", () => ({ updateItem: mocks.updateItem }));
+vi.mock("@/lib/db/items", () => ({
+  updateItem: mocks.updateItem,
+  deleteItem: mocks.deleteItem,
+}));
 
-import { updateItem } from "./items";
+import { deleteItem, updateItem } from "./items";
 
 const validData = {
   title: "  useAuth Hook  ",
@@ -106,6 +110,50 @@ describe("updateItem", () => {
     mocks.updateItem.mockRejectedValue(new Error("db down"));
 
     expect(await updateItem("item-1", validData)).toEqual({
+      success: false,
+      error: "Something went wrong. Please try again.",
+    });
+  });
+});
+
+describe("deleteItem", () => {
+  beforeEach(() => {
+    mocks.deleteItem.mockResolvedValue(true);
+  });
+
+  it("requires a session", async () => {
+    mocks.auth.mockResolvedValue(null);
+
+    expect(await deleteItem("item-1")).toEqual({
+      success: false,
+      error: "You must be signed in",
+    });
+    expect(mocks.deleteItem).not.toHaveBeenCalled();
+  });
+
+  it("rejects an invalid id", async () => {
+    expect(await deleteItem("")).toEqual({ success: false, error: "Invalid item" });
+    expect(mocks.deleteItem).not.toHaveBeenCalled();
+  });
+
+  it("deletes the item scoped to the signed-in user", async () => {
+    expect(await deleteItem("item-1")).toEqual({ success: true });
+    expect(mocks.deleteItem).toHaveBeenCalledWith("item-1", "u1");
+  });
+
+  it("reports an item that was not found", async () => {
+    mocks.deleteItem.mockResolvedValue(false);
+
+    expect(await deleteItem("item-1")).toEqual({
+      success: false,
+      error: "Item not found",
+    });
+  });
+
+  it("returns a friendly error on unexpected failure", async () => {
+    mocks.deleteItem.mockRejectedValue(new Error("db down"));
+
+    expect(await deleteItem("item-1")).toEqual({
       success: false,
       error: "Something went wrong. Please try again.",
     });

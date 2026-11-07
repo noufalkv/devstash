@@ -8,11 +8,11 @@ import {
   Pin,
   Star,
   Tag,
-  Trash2,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { ItemDeleteDialog } from "@/components/items/item-delete-dialog";
 import { ItemEditForm } from "@/components/items/item-edit-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -117,9 +117,11 @@ function SectionLabel({
 function ItemDetailView({
   item,
   onUpdated,
+  onDeleted,
 }: {
   item: ItemDetailJson;
   onUpdated: (item: ItemDetailJson) => void;
+  onDeleted: () => void;
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const { color } = item.itemType;
@@ -197,14 +199,11 @@ function ItemDetailView({
               label="Edit"
               onClick={() => setIsEditing(true)}
             />
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className="text-destructive"
-              aria-label="Delete"
-            >
-              <Trash2 />
-            </Button>
+            <ItemDeleteDialog
+              itemId={item.id}
+              title={item.title}
+              onDeleted={onDeleted}
+            />
           </div>
         </div>
       </SheetHeader>
@@ -316,7 +315,11 @@ export function ItemDrawer({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="gap-0 data-[side=right]:sm:max-w-xl">
         {state.status === "ready" && (
-          <ItemDetailView item={state.item} onUpdated={onItemUpdated} />
+          <ItemDetailView
+            item={state.item}
+            onUpdated={onItemUpdated}
+            onDeleted={() => onOpenChange(false)}
+          />
         )}
         {state.status === "loading" && (
           <>
