@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
@@ -12,6 +13,7 @@ import { getUserItemTypeCounts } from "@/lib/db/items";
 import { getSidebarUser } from "@/lib/db/users";
 
 async function DashboardSidebar() {
+  await connection();
   const session = await auth();
   const userId = session?.user?.id;
   if (!userId) redirect("/sign-in");
