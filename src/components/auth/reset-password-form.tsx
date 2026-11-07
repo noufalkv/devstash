@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { toast } from "sonner";
 
 import { resetPassword } from "@/actions/auth";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -15,6 +16,10 @@ interface ResetPasswordFormProps {
 
 export function ResetPasswordForm({ email, token }: ResetPasswordFormProps) {
   const [state, formAction, pending] = useActionState(resetPassword, null);
+
+  useEffect(() => {
+    if (state?.rateLimited && state.error) toast.error(state.error);
+  }, [state]);
 
   if (state?.success) {
     return (

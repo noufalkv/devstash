@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { toast } from "sonner";
 
 import { signInWithCredentials, signInWithGitHub } from "@/actions/auth";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,10 @@ interface SignInFormProps {
 
 export function SignInForm({ callbackUrl, notice }: SignInFormProps) {
   const [state, formAction, pending] = useActionState(signInWithCredentials, null);
+
+  useEffect(() => {
+    if (state?.rateLimited && state.error) toast.error(state.error);
+  }, [state]);
   const error = state?.error;
 
   return (

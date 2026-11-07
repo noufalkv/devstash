@@ -2,11 +2,18 @@
 
 import { AuthError, CredentialsSignin } from "next-auth";
 import bcrypt from "bcryptjs";
+import { headers } from "next/headers";
 import { z } from "zod";
 import { signIn, signOut } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { sendPasswordResetEmail, sendVerificationEmail } from "@/lib/email";
 import { isEmailVerificationEnabled } from "@/lib/email-verification";
+import {
+  checkRateLimit,
+  getClientIp,
+  rateLimitMessage,
+  type RateLimitName,
+} from "@/lib/rate-limit";
 import {
   consumePasswordResetToken,
   createPasswordResetToken,
@@ -17,6 +24,18 @@ export interface AuthActionResult {
   success: boolean;
   error?: string;
   unverifiedEmail?: string;
+  rateLimited?: boolean;
+}
+
+// Returns an error result when the caller is over the limit, otherwise null.
+async function limitAuthAction(
+  name: RateLimitName,
+  email?: string,
+): Promise<AuthActionResult | null> {
+  const ip = getClientIp(await headers());
+  const { success, reset } = await checkRateLimit(name, email ? `${ip}:${email}` : ip);
+  if (success) return null;
+  return { success: false, error: rateLimitMessage(reset), rateLimited: true };
 }
 
 const signInSchema = z.object({
@@ -43,6 +62,9 @@ export async function signInWithCredentials(
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0].message };
   }
+
+  const limited = await limitAuthAction("login", parsed.data.email.trim().toLowerCase());
+  if (limited) return limited;
 
   try {
     await signIn("credentials", {
@@ -89,6 +111,9 @@ export async function resendVerification(email: string): Promise<AuthActionResul
 
   if (!isEmailVerificationEnabled()) return { success: true };
 
+  const limited = await limitAuthAction("resendVerification", parsed.data.email);
+  if (limited) return limited;
+
   try {
     const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
     if (user?.password && !user.emailVerified) {
@@ -111,6 +136,9 @@ export async function requestPasswordReset(
 ): Promise<AuthActionResult> {
   const parsed = forgotPasswordSchema.safeParse({ email: formData.get("email") });
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message };
+
+  const limited = await limitAuthAction("forgotPassword");
+  if (limited) return limited;
 
   try {
     const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
@@ -151,6 +179,9 @@ export async function resetPassword(
     confirmPassword: formData.get("confirmPassword"),
   });
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message };
+
+  const limited = await limitAuthAction("resetPassword");
+  if (limited) return limited;
 
   try {
     const result = await consumePasswordResetToken(parsed.data.email, parsed.data.token);
