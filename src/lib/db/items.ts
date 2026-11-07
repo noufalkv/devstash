@@ -85,7 +85,9 @@ export async function getItemStats(): Promise<ItemStats> {
   return { total, favorites };
 }
 
-export async function getSidebarItemTypes(): Promise<SidebarItemType[]> {
+async function findItemTypeCounts(
+  where: Prisma.ItemWhereInput,
+): Promise<SidebarItemType[]> {
   const [types, counts] = await Promise.all([
     prisma.itemType.findMany({
       where: { isSystem: true },
@@ -93,7 +95,7 @@ export async function getSidebarItemTypes(): Promise<SidebarItemType[]> {
     }),
     prisma.item.groupBy({
       by: ["itemTypeId"],
-      where: { user: { email: DEMO_USER_EMAIL } },
+      where,
       _count: { _all: true },
     }),
   ]);
@@ -108,4 +110,12 @@ export async function getSidebarItemTypes(): Promise<SidebarItemType[]> {
       (a, b) =>
         SYSTEM_TYPE_ORDER.indexOf(a.name) - SYSTEM_TYPE_ORDER.indexOf(b.name),
     );
+}
+
+export function getSidebarItemTypes(): Promise<SidebarItemType[]> {
+  return findItemTypeCounts({ user: { email: DEMO_USER_EMAIL } });
+}
+
+export function getUserItemTypeCounts(userId: string): Promise<SidebarItemType[]> {
+  return findItemTypeCounts({ userId });
 }

@@ -12,3 +12,33 @@ export function getSidebarUser(userId: string): Promise<SidebarUser | null> {
     select: { name: true, email: true, image: true },
   });
 }
+
+export interface Profile extends SidebarUser {
+  createdAt: Date;
+  hasPassword: boolean;
+  itemCount: number;
+  collectionCount: number;
+}
+
+export async function getProfile(userId: string): Promise<Profile | null> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      name: true,
+      email: true,
+      image: true,
+      createdAt: true,
+      password: true,
+      _count: { select: { items: true, collections: true } },
+    },
+  });
+  if (!user) return null;
+
+  const { password, _count, ...rest } = user;
+  return {
+    ...rest,
+    hasPassword: password !== null,
+    itemCount: _count.items,
+    collectionCount: _count.collections,
+  };
+}
