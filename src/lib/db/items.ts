@@ -30,7 +30,7 @@ export interface SidebarItemType extends ItemSummaryType {
 }
 
 // Display order for system types in the sidebar
-const SYSTEM_TYPE_ORDER = [
+export const SYSTEM_TYPE_ORDER = [
   "snippet",
   "prompt",
   "command",
@@ -73,6 +73,10 @@ export function getPinnedItems(limit = 10): Promise<ItemSummary[]> {
 
 export function getRecentItems(limit = 10): Promise<ItemSummary[]> {
   return findItemSummaries({ take: limit });
+}
+
+export function getItemsByType(typeName: string): Promise<ItemSummary[]> {
+  return findItemSummaries({ where: { itemType: { name: typeName } } });
 }
 
 export async function getItemStats(): Promise<ItemStats> {
