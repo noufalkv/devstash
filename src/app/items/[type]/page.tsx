@@ -20,7 +20,7 @@ async function ItemsGrid({ typeName, title }: { typeName: string; title: string 
       </p>
 
       {items.length > 0 ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {items.map((item) => (
             <ItemCard key={item.id} item={item} />
           ))}
@@ -38,7 +38,7 @@ function ItemsGridSkeleton() {
   return (
     <div className="flex animate-pulse flex-col gap-6">
       <div className="h-5 w-24 rounded-md bg-muted" />
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 6 }, (_, i) => (
           <div key={i} className="h-24 rounded-xl bg-muted" />
         ))}

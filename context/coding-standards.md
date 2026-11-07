@@ -89,6 +89,14 @@ Example v4 configuration:
 - Return `{ success, data, error }` pattern from actions
 - Display user-friendly error messages via toast
 
+## Testing
+
+- Vitest, for server actions and utilities only (no component tests)
+- Colocate tests as `name.test.ts` next to the source file
+- Mock Prisma and external services (`vi.mock` with `vi.hoisted`); never hit a real database or API
+- Cover the happy path and the error paths; skip trivial code
+- No `any` in tests either
+
 ## Code Quality
 
 - No commented-out code unless specified
