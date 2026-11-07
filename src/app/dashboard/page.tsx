@@ -1,5 +1,7 @@
+import { redirect } from "next/navigation";
 import { FolderOpen, Heart, LayoutGrid, Pin, Star } from "lucide-react";
 
+import { auth } from "@/auth";
 import { CollectionCard } from "@/components/dashboard/collection-card";
 import { ItemRow } from "@/components/dashboard/item-row";
 import { StatCard } from "@/components/dashboard/stat-card";
@@ -7,13 +9,17 @@ import { getCollectionStats, getRecentCollections } from "@/lib/db/collections";
 import { getItemStats, getPinnedItems, getRecentItems } from "@/lib/db/items";
 
 export default async function DashboardPage() {
+  const session = await auth();
+  if (!session?.user?.id) redirect("/sign-in?callbackUrl=/dashboard");
+  const userId = session.user.id;
+
   const [recentCollections, collectionStats, pinnedItems, recentItems, itemStats] =
     await Promise.all([
-      getRecentCollections(),
-      getCollectionStats(),
-      getPinnedItems(),
-      getRecentItems(),
-      getItemStats(),
+      getRecentCollections(userId),
+      getCollectionStats(userId),
+      getPinnedItems(userId),
+      getRecentItems(userId),
+      getItemStats(userId),
     ]);
 
   const stats = [

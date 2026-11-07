@@ -1,4 +1,3 @@
-import { DEMO_USER_EMAIL } from "@/lib/db/demo-user";
 import { prisma } from "@/lib/prisma";
 
 export interface CollectionItemType {
@@ -26,10 +25,11 @@ export interface CollectionStats {
 
 // Ordered by updatedAt, most recent first; all collections when take is omitted
 async function findCollectionSummaries(
+  userId: string,
   take?: number,
 ): Promise<CollectionSummary[]> {
   const collections = await prisma.collection.findMany({
-    where: { user: { email: DEMO_USER_EMAIL } },
+    where: { userId },
     orderBy: { updatedAt: "desc" },
     take,
     select: {
@@ -67,16 +67,23 @@ async function findCollectionSummaries(
   });
 }
 
-export function getRecentCollections(limit = 6): Promise<CollectionSummary[]> {
-  return findCollectionSummaries(limit);
+export function getRecentCollections(
+  userId: string,
+  limit = 6,
+): Promise<CollectionSummary[]> {
+  return findCollectionSummaries(userId, limit);
 }
 
-export function getSidebarCollections(): Promise<CollectionSummary[]> {
-  return findCollectionSummaries();
+export function getSidebarCollections(
+  userId: string,
+): Promise<CollectionSummary[]> {
+  return findCollectionSummaries(userId);
 }
 
-export async function getCollectionStats(): Promise<CollectionStats> {
-  const where = { user: { email: DEMO_USER_EMAIL } };
+export async function getCollectionStats(
+  userId: string,
+): Promise<CollectionStats> {
+  const where = { userId };
   const [total, favorites] = await Promise.all([
     prisma.collection.count({ where }),
     prisma.collection.count({ where: { ...where, isFavorite: true } }),

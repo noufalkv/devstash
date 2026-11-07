@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Layers, PanelLeft, Plus, Search } from "lucide-react";
 
 import { useSidebar } from "@/components/layout/sidebar-provider";
@@ -11,10 +12,10 @@ export function TopBar() {
 
   return (
     <header className="flex h-16 shrink-0 items-center gap-4 border-b border-border px-4">
-      <div className="flex items-center gap-2 font-semibold">
+      <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
         <Layers className="size-5 text-primary" />
         <span>DevStash</span>
-      </div>
+      </Link>
 
       <Button
         variant="outline"

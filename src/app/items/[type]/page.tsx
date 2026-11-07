@@ -1,6 +1,7 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 
+import { auth } from "@/auth";
 import { ItemCard } from "@/components/items/item-card";
 import { getItemsByType, SYSTEM_TYPE_ORDER } from "@/lib/db/items";
 
@@ -11,7 +12,10 @@ export function generateStaticParams() {
 }
 
 async function ItemsGrid({ typeName, title }: { typeName: string; title: string }) {
-  const items = await getItemsByType(typeName);
+  const session = await auth();
+  if (!session?.user?.id) redirect("/sign-in");
+
+  const items = await getItemsByType(session.user.id, typeName);
 
   return (
     <>
