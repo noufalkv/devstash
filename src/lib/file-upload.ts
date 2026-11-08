@@ -66,6 +66,25 @@ export function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+export type FileIconKind = "pdf" | "json" | "spreadsheet" | "markup" | "text" | "generic";
+
+const FILE_ICON_KINDS: Record<string, FileIconKind> = {
+  ".pdf": "pdf",
+  ".json": "json",
+  ".csv": "spreadsheet",
+  ".yaml": "markup",
+  ".yml": "markup",
+  ".xml": "markup",
+  ".toml": "markup",
+  ".ini": "markup",
+  ".txt": "text",
+  ".md": "text",
+};
+
+export function getFileIconKind(fileName: string | null | undefined): FileIconKind {
+  return FILE_ICON_KINDS[getExtension(fileName ?? "")] ?? "generic";
+}
+
 // Returns an error message, or null when the file is allowed.
 // Browsers often send an empty or generic MIME type for .md, .yaml, .toml and
 // .ini files, so the extension is the main check and the MIME type is only

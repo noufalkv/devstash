@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { auth } from "@/auth";
+import { FileRow } from "@/components/items/file-row";
 import { ImageCard } from "@/components/items/image-card";
 import { ItemCard } from "@/components/items/item-card";
 import { NewItemDialog } from "@/components/items/new-item-dialog";
@@ -33,7 +34,13 @@ async function ItemsGrid({ typeName, title }: { typeName: string; title: string 
         {items.length} {items.length === 1 ? "item" : "items"}
       </p>
 
-      {items.length > 0 ? (
+      {items.length > 0 && typeName === "file" ? (
+        <div className="flex flex-col gap-2">
+          {items.map((item) => (
+            <FileRow key={item.id} item={item} />
+          ))}
+        </div>
+      ) : items.length > 0 ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {items.map((item) =>
             typeName === "image" ? (
@@ -52,7 +59,22 @@ async function ItemsGrid({ typeName, title }: { typeName: string; title: string 
   );
 }
 
-function ItemsGridSkeleton({ isImages }: { isImages: boolean }) {
+function ItemsGridSkeleton({ typeName }: { typeName: string }) {
+  const isImages = typeName === "image";
+
+  if (typeName === "file") {
+    return (
+      <div className="flex animate-pulse flex-col gap-6">
+        <div className="h-5 w-24 rounded-md bg-muted" />
+        <div className="flex flex-col gap-2">
+          {Array.from({ length: 6 }, (_, i) => (
+            <div key={i} className="h-16 rounded-xl bg-muted" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex animate-pulse flex-col gap-6">
       <div className="h-5 w-24 rounded-md bg-muted" />
@@ -96,7 +118,7 @@ export default async function ItemsByTypePage({
           />
         )}
       </div>
-      <Suspense fallback={<ItemsGridSkeleton isImages={typeName === "image"} />}>
+      <Suspense fallback={<ItemsGridSkeleton typeName={typeName} />}>
         <ItemsGrid typeName={typeName} title={title} />
       </Suspense>
     </div>

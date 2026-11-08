@@ -15,6 +15,8 @@ export interface ItemSummary {
   isFavorite: boolean;
   isPinned: boolean;
   createdAt: Date;
+  fileName: string | null;
+  fileSize: number | null;
   itemType: ItemSummaryType;
   tags: string[];
 }
@@ -24,8 +26,6 @@ export interface ItemDetail extends ItemSummary {
   content: string | null;
   language: string | null;
   url: string | null;
-  fileName: string | null;
-  fileSize: number | null;
   updatedAt: Date;
   collections: { id: string; name: string }[];
 }
@@ -57,6 +57,8 @@ const itemSummarySelect = {
   isFavorite: true,
   isPinned: true,
   createdAt: true,
+  fileName: true,
+  fileSize: true,
   itemType: { select: { id: true, name: true, icon: true, color: true } },
   tags: { select: { name: true }, orderBy: { name: "asc" } },
 } satisfies Prisma.ItemSelect;
@@ -105,8 +107,6 @@ const itemDetailSelect = {
   content: true,
   language: true,
   url: true,
-  fileName: true,
-  fileSize: true,
   updatedAt: true,
   collections: {
     select: { collection: { select: { id: true, name: true } } },
