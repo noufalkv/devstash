@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { auth } from "@/auth";
+import { ImageCard } from "@/components/items/image-card";
 import { ItemCard } from "@/components/items/item-card";
 import { NewItemDialog } from "@/components/items/new-item-dialog";
 import { getItemsByType, SYSTEM_TYPE_ORDER } from "@/lib/db/items";
@@ -34,9 +35,13 @@ async function ItemsGrid({ typeName, title }: { typeName: string; title: string 
 
       {items.length > 0 ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {items.map((item) => (
-            <ItemCard key={item.id} item={item} />
-          ))}
+          {items.map((item) =>
+            typeName === "image" ? (
+              <ImageCard key={item.id} item={item} />
+            ) : (
+              <ItemCard key={item.id} item={item} />
+            ),
+          )}
         </div>
       ) : (
         <p className="text-sm text-muted-foreground">
@@ -47,13 +52,18 @@ async function ItemsGrid({ typeName, title }: { typeName: string; title: string 
   );
 }
 
-function ItemsGridSkeleton() {
+function ItemsGridSkeleton({ isImages }: { isImages: boolean }) {
   return (
     <div className="flex animate-pulse flex-col gap-6">
       <div className="h-5 w-24 rounded-md bg-muted" />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 6 }, (_, i) => (
-          <div key={i} className="h-24 rounded-xl bg-muted" />
+          <div
+            key={i}
+            className={
+              isImages ? "aspect-video rounded-xl bg-muted" : "h-24 rounded-xl bg-muted"
+            }
+          />
         ))}
       </div>
     </div>
@@ -86,7 +96,7 @@ export default async function ItemsByTypePage({
           />
         )}
       </div>
-      <Suspense fallback={<ItemsGridSkeleton />}>
+      <Suspense fallback={<ItemsGridSkeleton isImages={typeName === "image"} />}>
         <ItemsGrid typeName={typeName} title={title} />
       </Suspense>
     </div>
