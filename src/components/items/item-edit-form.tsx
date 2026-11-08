@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { updateItem } from "@/actions/items";
 import { CodeEditor } from "@/components/items/code-editor";
+import { MarkdownEditor } from "@/components/items/markdown-editor";
 import type { ItemDetailJson } from "@/components/items/item-drawer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import { SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet
 import { Textarea } from "@/components/ui/textarea";
 import {
   CODE_EDITOR_TYPES,
+  MARKDOWN_EDITOR_TYPES,
   CONTENT_TYPES,
   LANGUAGE_TYPES,
   URL_TYPES,
@@ -166,6 +168,12 @@ export function ItemEditForm({
                 value={content}
                 onChange={setContent}
                 language={language}
+              />
+            ) : MARKDOWN_EDITOR_TYPES.has(typeName) ? (
+              <MarkdownEditor
+                id="item-content"
+                value={content}
+                onChange={setContent}
               />
             ) : (
               <Textarea

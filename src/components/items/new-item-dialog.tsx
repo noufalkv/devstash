@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { createItem } from "@/actions/items";
 import { CodeEditor } from "@/components/items/code-editor";
+import { MarkdownEditor } from "@/components/items/markdown-editor";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   CODE_EDITOR_TYPES,
+  MARKDOWN_EDITOR_TYPES,
   CONTENT_TYPES,
   CREATABLE_ITEM_TYPES,
   LANGUAGE_TYPES,
@@ -134,6 +136,12 @@ function NewItemForm({
               value={content}
               onChange={setContent}
               language={language}
+            />
+          ) : MARKDOWN_EDITOR_TYPES.has(type) ? (
+            <MarkdownEditor
+              id="new-item-content"
+              value={content}
+              onChange={setContent}
             />
           ) : (
             <Textarea
