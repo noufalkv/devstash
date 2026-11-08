@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 
@@ -18,6 +19,8 @@ export function generateStaticParams() {
 }
 
 async function ItemsGrid({ typeName, title }: { typeName: string; title: string }) {
+  // Reads the current time via auth(), so render at request time, not prerender
+  await connection();
   const session = await auth();
   if (!session?.user?.id) redirect("/sign-in");
 

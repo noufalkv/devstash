@@ -146,8 +146,15 @@ export interface UpdateItemData {
   tags: string[];
 }
 
+export interface ItemFileData {
+  key: string;
+  name: string;
+  size: number;
+}
+
 export interface CreateItemData extends UpdateItemData {
   type: string;
+  file?: ItemFileData | null;
 }
 
 // Returns null when the system item type does not exist
@@ -155,7 +162,7 @@ export async function createItem(
   userId: string,
   data: CreateItemData,
 ): Promise<ItemDetail | null> {
-  const { type, tags, ...fields } = data;
+  const { type, tags, file, ...fields } = data;
 
   const itemType = await prisma.itemType.findFirst({
     where: { name: type, isSystem: true, userId: null },
@@ -166,7 +173,10 @@ export async function createItem(
   const item = await prisma.item.create({
     data: {
       ...fields,
-      contentType: type === "link" ? "URL" : "TEXT",
+      ...(file
+        ? { fileUrl: file.key, fileName: file.name, fileSize: file.size }
+        : {}),
+      contentType: file ? "FILE" : type === "link" ? "URL" : "TEXT",
       userId,
       itemTypeId: itemType.id,
       tags: {
@@ -209,6 +219,24 @@ export async function updateItem(
     if (isRecordNotFound(error)) return null;
     throw error;
   }
+}
+
+export interface ItemFileRef {
+  key: string;
+  name: string;
+}
+
+// An item's stored file; null when the item has none or is not owned
+export async function getItemFile(
+  id: string,
+  userId: string,
+): Promise<ItemFileRef | null> {
+  const item = await prisma.item.findFirst({
+    where: { id, userId },
+    select: { fileUrl: true, fileName: true },
+  });
+  if (!item?.fileUrl) return null;
+  return { key: item.fileUrl, name: item.fileName ?? "download" };
 }
 
 // Deletable only by its owner; returns false when the item is not found

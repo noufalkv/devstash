@@ -5,6 +5,8 @@ export const CREATABLE_ITEM_TYPES = [
   "command",
   "note",
   "link",
+  "file",
+  "image",
 ] as const;
 
 export type CreatableItemType = (typeof CREATABLE_ITEM_TYPES)[number];

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { createItem } from "@/actions/items";
 import { CodeEditor } from "@/components/items/code-editor";
+import { FileUpload } from "@/components/items/file-upload";
 import { MarkdownEditor } from "@/components/items/markdown-editor";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +29,8 @@ import {
   URL_TYPES,
   type CreatableItemType,
 } from "@/lib/item-fields";
+import { isFileItemType } from "@/lib/file-upload";
+import type { ItemFileData } from "@/lib/db/items";
 
 function Field({
   id,
@@ -62,11 +65,16 @@ function NewItemForm({
   const [language, setLanguage] = useState("");
   const [url, setUrl] = useState("");
   const [tags, setTags] = useState("");
+  const [file, setFile] = useState<ItemFileData | null>(null);
 
   const showContent = CONTENT_TYPES.has(type);
   const showLanguage = LANGUAGE_TYPES.has(type);
   const showUrl = URL_TYPES.has(type);
-  const canSubmit = title.trim() !== "" && (!showUrl || url.trim() !== "");
+  const fileType = isFileItemType(type) ? type : null;
+  const canSubmit =
+    title.trim() !== "" &&
+    (!showUrl || url.trim() !== "") &&
+    (!fileType || file !== null);
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -79,6 +87,7 @@ function NewItemForm({
         content: showContent ? content : "",
         language: showLanguage ? language : "",
         url: showUrl ? url : "",
+        file: fileType ? file : null,
         tags: tags.split(","),
       });
 
@@ -105,7 +114,10 @@ function NewItemForm({
             aria-pressed={type === name}
             className="capitalize"
             disabled={isPending}
-            onClick={() => setType(name)}
+            onClick={() => {
+              setType(name);
+              setFile(null);
+            }}
           >
             {name}
           </Button>
@@ -128,6 +140,19 @@ function NewItemForm({
           onChange={(event) => setDescription(event.target.value)}
         />
       </Field>
+
+      {fileType && (
+        <div className="flex flex-col gap-2">
+          <Label>File</Label>
+          <FileUpload
+            key={fileType}
+            type={fileType}
+            value={file}
+            onChange={setFile}
+            disabled={isPending}
+          />
+        </div>
+      )}
 
       {showContent && (
         <Field id="new-item-content" label="Content">
