@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatFileSize, getExtension, resolveContentType, validateFile } from "@/lib/file-upload";
+import { formatFileSize, getExtension, getFileIconKind, resolveContentType, validateFile } from "@/lib/file-upload";
 
 const MB = 1024 * 1024;
 
@@ -61,5 +61,21 @@ describe("helpers", () => {
     expect(formatFileSize(512)).toBe("512 B");
     expect(formatFileSize(2048)).toBe("2.0 KB");
     expect(formatFileSize(3 * MB)).toBe("3.0 MB");
+  });
+});
+
+describe("getFileIconKind", () => {
+  it("maps known extensions to an icon kind", () => {
+    expect(getFileIconKind("report.PDF")).toBe("pdf");
+    expect(getFileIconKind("data.json")).toBe("json");
+    expect(getFileIconKind("table.csv")).toBe("spreadsheet");
+    expect(getFileIconKind("config.yml")).toBe("markup");
+    expect(getFileIconKind("notes.md")).toBe("text");
+  });
+
+  it("falls back to generic", () => {
+    expect(getFileIconKind("archive.zip")).toBe("generic");
+    expect(getFileIconKind("README")).toBe("generic");
+    expect(getFileIconKind(null)).toBe("generic");
   });
 });
