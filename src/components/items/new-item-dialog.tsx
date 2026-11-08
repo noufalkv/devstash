@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { createItem } from "@/actions/items";
+import { CodeEditor } from "@/components/items/code-editor";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  CODE_EDITOR_TYPES,
   CONTENT_TYPES,
   CREATABLE_ITEM_TYPES,
   LANGUAGE_TYPES,
@@ -42,10 +44,16 @@ function Field({
   );
 }
 
-function NewItemForm({ onCreated }: { onCreated: () => void }) {
+function NewItemForm({
+  onCreated,
+  defaultType,
+}: {
+  onCreated: () => void;
+  defaultType?: CreatableItemType;
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [type, setType] = useState<CreatableItemType>("snippet");
+  const [type, setType] = useState<CreatableItemType>(defaultType ?? "snippet");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [content, setContent] = useState("");
@@ -121,12 +129,20 @@ function NewItemForm({ onCreated }: { onCreated: () => void }) {
 
       {showContent && (
         <Field id="new-item-content" label="Content">
-          <Textarea
-            id="new-item-content"
-            className="min-h-32 font-mono text-xs"
-            value={content}
-            onChange={(event) => setContent(event.target.value)}
-          />
+          {CODE_EDITOR_TYPES.has(type) ? (
+            <CodeEditor
+              value={content}
+              onChange={setContent}
+              language={language}
+            />
+          ) : (
+            <Textarea
+              id="new-item-content"
+              className="min-h-32 font-mono text-xs"
+              value={content}
+              onChange={(event) => setContent(event.target.value)}
+            />
+          )}
         </Field>
       )}
 
@@ -166,14 +182,20 @@ function NewItemForm({ onCreated }: { onCreated: () => void }) {
   );
 }
 
-export function NewItemDialog() {
+export function NewItemDialog({
+  defaultType,
+  label = "New Item",
+}: {
+  defaultType?: CreatableItemType;
+  label?: string;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
     <>
       <Button onClick={() => setOpen(true)}>
         <Plus />
-        New Item
+        {label}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
@@ -183,7 +205,10 @@ export function NewItemDialog() {
               Choose a type and fill in the details.
             </DialogDescription>
           </DialogHeader>
-          <NewItemForm onCreated={() => setOpen(false)} />
+          <NewItemForm
+            onCreated={() => setOpen(false)}
+            defaultType={defaultType}
+          />
         </DialogContent>
       </Dialog>
     </>

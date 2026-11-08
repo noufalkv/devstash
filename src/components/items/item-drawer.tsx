@@ -12,6 +12,7 @@ import {
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { CodeEditor } from "@/components/items/code-editor";
 import { ItemDeleteDialog } from "@/components/items/item-delete-dialog";
 import { ItemEditForm } from "@/components/items/item-edit-form";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +26,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import type { ItemDetail } from "@/lib/db/items";
+import { CODE_EDITOR_TYPES } from "@/lib/item-fields";
 import { ITEM_TYPE_ICONS } from "@/lib/item-type-icons";
 import { cn } from "@/lib/utils";
 
@@ -219,9 +221,17 @@ function ItemDetailView({
         {item.contentType === "TEXT" && item.content && (
           <section className="flex flex-col gap-2">
             <SectionLabel>Content</SectionLabel>
-            <pre className="overflow-x-auto rounded-lg bg-muted p-4 font-mono text-xs leading-relaxed whitespace-pre">
-              {item.content}
-            </pre>
+            {CODE_EDITOR_TYPES.has(item.itemType.name) ? (
+              <CodeEditor
+                value={item.content}
+                language={item.language}
+                readOnly
+              />
+            ) : (
+              <pre className="overflow-x-auto rounded-lg bg-muted p-4 font-mono text-xs leading-relaxed whitespace-pre">
+                {item.content}
+              </pre>
+            )}
           </section>
         )}
 
