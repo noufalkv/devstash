@@ -21,6 +21,7 @@ vi.mock("@/lib/prisma", () => ({
 import {
   createItem,
   getItemDetail,
+  getItemFile,
   getItemStats,
   getItemsByType,
   deleteItem,
@@ -272,5 +273,60 @@ describe("createItem", () => {
 
     await expect(createItem("user-1", data)).resolves.toBeNull();
     expect(create).not.toHaveBeenCalled();
+  });
+});
+
+describe("createItem with a file", () => {
+  beforeEach(() => {
+    create.mockReset().mockResolvedValue(row);
+    findType.mockReset().mockResolvedValue({ id: "type-file" });
+  });
+
+  it("stores the R2 key and file info as a FILE item", async () => {
+    await createItem("user-1", {
+      type: "file",
+      title: "Spec",
+      description: null,
+      content: null,
+      url: null,
+      language: null,
+      tags: [],
+      file: { key: "user-1/abc-spec.pdf", name: "spec.pdf", size: 1024 },
+    });
+
+    const args = create.mock.calls[0][0];
+    expect(args.data).toMatchObject({
+      contentType: "FILE",
+      fileUrl: "user-1/abc-spec.pdf",
+      fileName: "spec.pdf",
+      fileSize: 1024,
+    });
+    expect(args.data).not.toHaveProperty("file");
+  });
+});
+
+describe("getItemFile", () => {
+  beforeEach(() => {
+    findFirst.mockReset();
+  });
+
+  it("scopes the lookup to the user", async () => {
+    findFirst.mockResolvedValue({ fileUrl: "user-1/abc-spec.pdf", fileName: "spec.pdf" });
+
+    expect(await getItemFile("item-1", "user-1")).toEqual({
+      key: "user-1/abc-spec.pdf",
+      name: "spec.pdf",
+    });
+    expect(findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: "item-1", userId: "user-1" } }),
+    );
+  });
+
+  it("returns null when the item has no file or is not found", async () => {
+    findFirst.mockResolvedValueOnce({ fileUrl: null, fileName: null });
+    expect(await getItemFile("item-1", "user-1")).toBeNull();
+
+    findFirst.mockResolvedValueOnce(null);
+    expect(await getItemFile("item-2", "user-1")).toBeNull();
   });
 });

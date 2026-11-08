@@ -5,6 +5,8 @@ const mocks = vi.hoisted(() => ({
   updateItem: vi.fn(),
   deleteItem: vi.fn(),
   createItem: vi.fn(),
+  getItemFile: vi.fn(),
+  deleteFromR2: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
@@ -12,6 +14,11 @@ vi.mock("@/lib/db/items", () => ({
   updateItem: mocks.updateItem,
   deleteItem: mocks.deleteItem,
   createItem: mocks.createItem,
+  getItemFile: mocks.getItemFile,
+}));
+vi.mock("@/lib/r2", () => ({
+  deleteFromR2: mocks.deleteFromR2,
+  isOwnedKey: (userId: string, key: string) => key.startsWith(`${userId}/`),
 }));
 
 import { createItem, deleteItem, updateItem } from "./items";
@@ -31,6 +38,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.auth.mockResolvedValue({ user: { id: "u1" } });
   mocks.updateItem.mockResolvedValue(updatedItem);
+  mocks.getItemFile.mockResolvedValue(null);
+  mocks.deleteFromR2.mockResolvedValue(undefined);
 });
 
 describe("updateItem", () => {
@@ -195,7 +204,7 @@ describe("createItem", () => {
   });
 
   it("rejects types that cannot be created here", async () => {
-    const result = await createItem({ ...snippet, type: "file" });
+    const result = await createItem({ ...snippet, type: "collection" });
 
     expect(result.success).toBe(false);
     expect(mocks.createItem).not.toHaveBeenCalled();
@@ -225,6 +234,7 @@ describe("createItem", () => {
       content: "const a = 1;",
       language: "typescript",
       url: null,
+      file: null,
       tags: ["react", "auth"],
     });
   });
@@ -265,5 +275,104 @@ describe("createItem", () => {
       success: false,
       error: "Something went wrong. Please try again.",
     });
+  });
+});
+
+describe("createItem with files", () => {
+  const upload = {
+    type: "file",
+    title: "Spec",
+    description: "",
+    content: "ignored",
+    language: "",
+    url: "",
+    tags: [],
+  };
+  const file = { key: "u1/abc-spec.pdf", name: "spec.pdf", size: 1024 };
+
+  beforeEach(() => {
+    mocks.createItem.mockResolvedValue(updatedItem);
+  });
+
+  it("passes the uploaded file and drops text fields", async () => {
+    const result = await createItem({ ...upload, file });
+
+    expect(result.success).toBe(true);
+    expect(mocks.createItem).toHaveBeenCalledWith(
+      "u1",
+      expect.objectContaining({ type: "file", content: null, file }),
+    );
+  });
+
+  it("requires an uploaded file", async () => {
+    const result = await createItem(upload);
+
+    expect(result).toEqual({ success: false, error: "Upload a file first" });
+    expect(mocks.createItem).not.toHaveBeenCalled();
+  });
+
+  it("rejects a file key that belongs to another user", async () => {
+    const result = await createItem({
+      ...upload,
+      file: { ...file, key: "u2/abc-spec.pdf" },
+    });
+
+    expect(result).toEqual({ success: false, error: "Invalid file" });
+    expect(mocks.createItem).not.toHaveBeenCalled();
+  });
+
+  it("rejects a disallowed extension", async () => {
+    const result = await createItem({
+      ...upload,
+      file: { ...file, name: "run.exe" },
+    });
+
+    expect(result.success).toBe(false);
+    expect(mocks.createItem).not.toHaveBeenCalled();
+  });
+
+  it("rejects an image over 5 MB", async () => {
+    const result = await createItem({
+      ...upload,
+      type: "image",
+      file: { key: "u1/abc-a.png", name: "a.png", size: 6 * 1024 * 1024 },
+    });
+
+    expect(result.success).toBe(false);
+    expect(mocks.createItem).not.toHaveBeenCalled();
+  });
+});
+
+describe("deleteItem with files", () => {
+  beforeEach(() => {
+    mocks.deleteItem.mockResolvedValue(true);
+  });
+
+  it("deletes the file from R2 after the item", async () => {
+    mocks.getItemFile.mockResolvedValue({ key: "u1/abc-spec.pdf", name: "spec.pdf" });
+
+    expect(await deleteItem("item-1")).toEqual({ success: true });
+    expect(mocks.deleteFromR2).toHaveBeenCalledWith("u1/abc-spec.pdf");
+  });
+
+  it("does not touch R2 for items without a file", async () => {
+    await deleteItem("item-1");
+
+    expect(mocks.deleteFromR2).not.toHaveBeenCalled();
+  });
+
+  it("keeps the file when the item was not deleted", async () => {
+    mocks.getItemFile.mockResolvedValue({ key: "u1/abc-spec.pdf", name: "spec.pdf" });
+    mocks.deleteItem.mockResolvedValue(false);
+
+    expect(await deleteItem("item-1")).toEqual({ success: false, error: "Item not found" });
+    expect(mocks.deleteFromR2).not.toHaveBeenCalled();
+  });
+
+  it("still succeeds when the R2 cleanup fails", async () => {
+    mocks.getItemFile.mockResolvedValue({ key: "u1/abc-spec.pdf", name: "spec.pdf" });
+    mocks.deleteFromR2.mockRejectedValue(new Error("r2 down"));
+
+    expect(await deleteItem("item-1")).toEqual({ success: true });
   });
 });

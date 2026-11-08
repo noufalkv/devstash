@@ -3,6 +3,7 @@
 import {
   Calendar,
   Copy,
+  Download,
   FolderOpen,
   Pencil,
   Pin,
@@ -17,7 +18,7 @@ import { MarkdownEditor } from "@/components/items/markdown-editor";
 import { ItemDeleteDialog } from "@/components/items/item-delete-dialog";
 import { ItemEditForm } from "@/components/items/item-edit-form";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
@@ -27,6 +28,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import type { ItemDetail } from "@/lib/db/items";
+import { formatFileSize } from "@/lib/file-upload";
 import { CODE_EDITOR_TYPES, MARKDOWN_EDITOR_TYPES } from "@/lib/item-fields";
 import { ITEM_TYPE_ICONS } from "@/lib/item-type-icons";
 import { cn } from "@/lib/utils";
@@ -47,12 +49,6 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
   timeZone: "UTC",
 });
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 function getCopyText(item: ItemDetailJson): string | null {
   return item.contentType === "URL" ? item.url : item.content;
@@ -196,6 +192,16 @@ function ItemDetailView({
           {copyText && (
             <ActionButton icon={Copy} label="Copy" onClick={handleCopy} />
           )}
+          {item.contentType === "FILE" && (
+            <a
+              href={`/api/download/${item.id}`}
+              download
+              className={buttonVariants({ variant: "ghost", size: "sm" })}
+            >
+              <Download />
+              Download
+            </a>
+          )}
           <div className="ml-auto flex items-center gap-1">
             <ActionButton
               icon={Pencil}
@@ -254,8 +260,16 @@ function ItemDetailView({
 
         {item.contentType === "FILE" && item.fileName && (
           <section className="flex flex-col gap-2">
-            <SectionLabel>File</SectionLabel>
-            <p>
+            <SectionLabel>{item.itemType.name === "image" ? "Image" : "File"}</SectionLabel>
+            {item.itemType.name === "image" && (
+              // eslint-disable-next-line @next/next/no-img-element -- served by the authenticated download proxy
+              <img
+                src={`/api/download/${item.id}?inline=1`}
+                alt={item.title}
+                className="max-h-80 w-full rounded-lg border bg-muted object-contain"
+              />
+            )}
+            <p className="break-all">
               {item.fileName}
               {item.fileSize !== null && (
                 <span className="text-muted-foreground">

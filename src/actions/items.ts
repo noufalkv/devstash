@@ -8,9 +8,12 @@ import {
   LANGUAGE_TYPES,
   URL_TYPES,
 } from "@/lib/item-fields";
+import { isFileItemType, validateFile } from "@/lib/file-upload";
+import { deleteFromR2, isOwnedKey } from "@/lib/r2";
 import {
   createItem as createItemQuery,
   deleteItem as deleteItemQuery,
+  getItemFile,
   updateItem as updateItemQuery,
   type ItemDetail,
 } from "@/lib/db/items";
@@ -46,11 +49,32 @@ const updateItemSchema = z.object({
     ]),
 });
 
+const uploadedFileSchema = z.object({
+  key: z.string().min(1),
+  name: z.string().trim().min(1),
+  size: z.number().int().positive(),
+});
+
 const createItemSchema = updateItemSchema
-  .extend({ type: z.enum(CREATABLE_ITEM_TYPES) })
+  .extend({
+    type: z.enum(CREATABLE_ITEM_TYPES),
+    file: uploadedFileSchema.nullish(),
+  })
   .superRefine((data, ctx) => {
     if (URL_TYPES.has(data.type) && !data.url) {
       ctx.addIssue({ code: "custom", path: ["url"], message: "URL is required" });
+    }
+    if (isFileItemType(data.type)) {
+      if (!data.file) {
+        ctx.addIssue({ code: "custom", path: ["file"], message: "Upload a file first" });
+      } else {
+        const error = validateFile(data.type, {
+          name: data.file.name,
+          size: data.file.size,
+          type: "",
+        });
+        if (error) ctx.addIssue({ code: "custom", path: ["file"], message: error });
+      }
     }
   })
   .transform((data) => ({
@@ -59,6 +83,7 @@ const createItemSchema = updateItemSchema
     content: CONTENT_TYPES.has(data.type) ? data.content : null,
     language: LANGUAGE_TYPES.has(data.type) ? data.language : null,
     url: URL_TYPES.has(data.type) ? data.url : null,
+    file: isFileItemType(data.type) ? data.file : null,
   }));
 
 export async function createItem(
@@ -69,6 +94,11 @@ export async function createItem(
 
   const parsed = createItemSchema.safeParse(data);
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message };
+
+  const { file } = parsed.data;
+  if (file && !isOwnedKey(session.user.id, file.key)) {
+    return { success: false, error: "Invalid file" };
+  }
 
   try {
     const item = await createItemQuery(session.user.id, parsed.data);
@@ -106,8 +136,13 @@ export async function deleteItem(itemId: unknown): Promise<ItemActionResult<void
   if (!parsed.success) return { success: false, error: "Invalid item" };
 
   try {
+    const file = await getItemFile(parsed.data, session.user.id);
     const deleted = await deleteItemQuery(parsed.data, session.user.id);
     if (!deleted) return { success: false, error: "Item not found" };
+    if (file) {
+      // The item is already gone; a failed cleanup must not fail the delete
+      await deleteFromR2(file.key).catch(() => undefined);
+    }
     return { success: true };
   } catch {
     return { success: false, error: "Something went wrong. Please try again." };
