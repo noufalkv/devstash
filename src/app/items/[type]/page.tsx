@@ -3,7 +3,13 @@ import { Suspense } from "react";
 
 import { auth } from "@/auth";
 import { ItemCard } from "@/components/items/item-card";
+import { NewItemDialog } from "@/components/items/new-item-dialog";
 import { getItemsByType, SYSTEM_TYPE_ORDER } from "@/lib/db/items";
+import { CREATABLE_ITEM_TYPES, type CreatableItemType } from "@/lib/item-fields";
+
+function toCreatableType(typeName: string): CreatableItemType | undefined {
+  return CREATABLE_ITEM_TYPES.find((type) => type === typeName);
+}
 
 const TYPE_BY_SLUG = new Map(SYSTEM_TYPE_ORDER.map((name) => [`${name}s`, name]));
 
@@ -63,11 +69,20 @@ export default async function ItemsByTypePage({
     notFound();
   }
 
+  const creatableType = toCreatableType(typeName);
   const title = `${typeName.charAt(0).toUpperCase()}${typeName.slice(1)}s`;
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-3xl font-semibold">{title}</h1>
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-3xl font-semibold">{title}</h1>
+        {creatableType && (
+          <NewItemDialog
+            defaultType={creatableType}
+            label={`Add ${typeName}`}
+          />
+        )}
+      </div>
       <Suspense fallback={<ItemsGridSkeleton />}>
         <ItemsGrid typeName={typeName} title={title} />
       </Suspense>

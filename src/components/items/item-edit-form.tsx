@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { updateItem } from "@/actions/items";
+import { CodeEditor } from "@/components/items/code-editor";
 import type { ItemDetailJson } from "@/components/items/item-drawer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  CODE_EDITOR_TYPES,
   CONTENT_TYPES,
   LANGUAGE_TYPES,
   URL_TYPES,
@@ -159,12 +161,20 @@ export function ItemEditForm({
 
         {showContent && (
           <Field id="item-content" label="Content">
-            <Textarea
-              id="item-content"
-              className="min-h-40 font-mono text-xs"
-              value={content}
-              onChange={(event) => setContent(event.target.value)}
-            />
+            {CODE_EDITOR_TYPES.has(typeName) ? (
+              <CodeEditor
+                value={content}
+                onChange={setContent}
+                language={language}
+              />
+            ) : (
+              <Textarea
+                id="item-content"
+                className="min-h-40 font-mono text-xs"
+                value={content}
+                onChange={(event) => setContent(event.target.value)}
+              />
+            )}
           </Field>
         )}
 
