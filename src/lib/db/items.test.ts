@@ -23,6 +23,7 @@ import {
   getItemDetail,
   getItemFile,
   getItemStats,
+  getItemsByCollection,
   getItemsByType,
   deleteItem,
   getPinnedItems,
@@ -107,6 +108,15 @@ describe("user scoping", () => {
 
     expect(findMany.mock.calls[0][0].where).toEqual({
       itemType: { name: "snippet" },
+      userId: "user-1",
+    });
+  });
+
+  it("filters items by collection and user id", async () => {
+    await getItemsByCollection("user-1", "col-1");
+
+    expect(findMany.mock.calls[0][0].where).toEqual({
+      collections: { some: { collectionId: "col-1" } },
       userId: "user-1",
     });
   });

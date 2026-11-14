@@ -1,19 +1,88 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { create, findMany } = vi.hoisted(() => ({
+const { create, findFirst, findMany } = vi.hoisted(() => ({
   create: vi.fn(),
+  findFirst: vi.fn(),
   findMany: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
-  prisma: { collection: { create, findMany } },
+  prisma: { collection: { create, findFirst, findMany } },
 }));
 
 import {
   createCollection,
   findOwnedCollectionIds,
+  getAllCollections,
+  getCollection,
   getCollectionOptions,
 } from "@/lib/db/collections";
+
+describe("getAllCollections", () => {
+  beforeEach(() => {
+    findMany.mockReset();
+  });
+
+  it("returns every user collection with item type counts", async () => {
+    const snippet = { id: "t-1", name: "snippet", icon: "Code", color: "#3b82f6" };
+    const link = { id: "t-2", name: "link", icon: "Link", color: "#10b981" };
+    findMany.mockResolvedValue([
+      {
+        id: "col-1",
+        name: "React",
+        description: null,
+        isFavorite: false,
+        items: [
+          { item: { itemType: link } },
+          { item: { itemType: snippet } },
+          { item: { itemType: snippet } },
+        ],
+      },
+    ]);
+
+    await expect(getAllCollections("user-1")).resolves.toEqual([
+      {
+        id: "col-1",
+        name: "React",
+        description: null,
+        isFavorite: false,
+        itemCount: 3,
+        itemTypes: [
+          { ...snippet, count: 2 },
+          { ...link, count: 1 },
+        ],
+      },
+    ]);
+    const args = findMany.mock.calls[0][0];
+    expect(args.where).toEqual({ userId: "user-1" });
+    expect(args.take).toBeUndefined();
+  });
+});
+
+describe("getCollection", () => {
+  beforeEach(() => {
+    findFirst.mockReset();
+  });
+
+  it("looks the collection up by id and owner", async () => {
+    const collection = {
+      id: "col-1",
+      name: "React",
+      description: "Hooks",
+      isFavorite: true,
+    };
+    findFirst.mockResolvedValue(collection);
+
+    await expect(getCollection("user-1", "col-1")).resolves.toEqual(collection);
+    expect(findFirst.mock.calls[0][0].where).toEqual({ id: "col-1", userId: "user-1" });
+  });
+
+  it("returns null when the user does not own the collection", async () => {
+    findFirst.mockResolvedValue(null);
+
+    await expect(getCollection("user-1", "col-other")).resolves.toBeNull();
+  });
+});
 
 describe("getCollectionOptions", () => {
   beforeEach(() => {
