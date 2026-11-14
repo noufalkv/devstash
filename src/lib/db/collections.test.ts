@@ -1,35 +1,42 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { create, findFirst, findMany, update, remove } = vi.hoisted(() => ({
+const { create, findFirst, findMany, count, update, remove } = vi.hoisted(() => ({
   create: vi.fn(),
   findFirst: vi.fn(),
   findMany: vi.fn(),
+  count: vi.fn(),
   update: vi.fn(),
   remove: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
-  prisma: { collection: { create, findFirst, findMany, update, delete: remove } },
+  prisma: {
+    collection: { create, findFirst, findMany, count, update, delete: remove },
+  },
 }));
 
 import {
   createCollection,
   deleteCollection,
   findOwnedCollectionIds,
-  getAllCollections,
   getCollection,
   getCollectionOptions,
+  getCollectionsPage,
+  getRecentCollections,
+  getSidebarCollections,
   updateCollection,
 } from "@/lib/db/collections";
+import { DASHBOARD_COLLECTIONS_LIMIT } from "@/lib/pagination";
 
 const notFound = Object.assign(new Error("Record not found"), { code: "P2025" });
 
-describe("getAllCollections", () => {
+describe("getCollectionsPage", () => {
   beforeEach(() => {
     findMany.mockReset();
+    count.mockReset().mockResolvedValue(3);
   });
 
-  it("returns every user collection with item type counts", async () => {
+  it("returns one page of the user's collections with item type counts", async () => {
     const snippet = { id: "t-1", name: "snippet", icon: "Code", color: "#3b82f6" };
     const link = { id: "t-2", name: "link", icon: "Link", color: "#10b981" };
     findMany.mockResolvedValue([
@@ -46,22 +53,73 @@ describe("getAllCollections", () => {
       },
     ]);
 
-    await expect(getAllCollections("user-1")).resolves.toEqual([
-      {
-        id: "col-1",
-        name: "React",
-        description: null,
-        isFavorite: false,
-        itemCount: 3,
-        itemTypes: [
-          { ...snippet, count: 2 },
-          { ...link, count: 1 },
-        ],
-      },
+    await expect(
+      getCollectionsPage("user-1", { page: 1, perPage: 21 }),
+    ).resolves.toEqual({
+      rows: [
+        {
+          id: "col-1",
+          name: "React",
+          description: null,
+          isFavorite: false,
+          itemCount: 3,
+          itemTypes: [
+            { ...snippet, count: 2 },
+            { ...link, count: 1 },
+          ],
+        },
+      ],
+      total: 3,
+    });
+    const args = findMany.mock.calls[0][0];
+    expect(args.where).toEqual({ userId: "user-1" });
+    expect(args).toMatchObject({ skip: 0, take: 21 });
+    expect(count.mock.calls[0][0].where).toEqual({ userId: "user-1" });
+  });
+
+  it("skips the rows of earlier pages", async () => {
+    findMany.mockResolvedValue([]);
+
+    await getCollectionsPage("user-1", { page: 3, perPage: 21 });
+
+    expect(findMany.mock.calls[0][0]).toMatchObject({ skip: 42, take: 21 });
+  });
+
+  it("orders by most recently updated with an id tie-break", async () => {
+    findMany.mockResolvedValue([]);
+
+    await getCollectionsPage("user-1", { page: 1, perPage: 21 });
+
+    expect(findMany.mock.calls[0][0].orderBy).toEqual([
+      { updatedAt: "desc" },
+      { id: "desc" },
     ]);
+  });
+});
+
+describe("getSidebarCollections", () => {
+  beforeEach(() => {
+    findMany.mockReset().mockResolvedValue([]);
+  });
+
+  it("loads every user collection without a limit", async () => {
+    await getSidebarCollections("user-1");
+
     const args = findMany.mock.calls[0][0];
     expect(args.where).toEqual({ userId: "user-1" });
     expect(args.take).toBeUndefined();
+  });
+});
+
+describe("getRecentCollections", () => {
+  beforeEach(() => {
+    findMany.mockReset().mockResolvedValue([]);
+  });
+
+  it("takes the dashboard limit by default", async () => {
+    await getRecentCollections("user-1");
+
+    expect(findMany.mock.calls[0][0].take).toBe(DASHBOARD_COLLECTIONS_LIMIT);
   });
 });
 

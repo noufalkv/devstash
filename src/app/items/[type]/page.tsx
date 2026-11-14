@@ -7,7 +7,14 @@ import { FileRow } from "@/components/items/file-row";
 import { ImageCard } from "@/components/items/image-card";
 import { ItemCard } from "@/components/items/item-card";
 import { NewItemDialog } from "@/components/items/new-item-dialog";
+import { Pagination } from "@/components/shared/pagination";
 import { getItemsByType, SYSTEM_TYPE_ORDER } from "@/lib/db/items";
+import {
+  getPageCount,
+  getPageHref,
+  ITEMS_PER_PAGE,
+  parsePage,
+} from "@/lib/pagination";
 import { CREATABLE_ITEM_TYPES, type CreatableItemType } from "@/lib/item-fields";
 
 function toCreatableType(typeName: string): CreatableItemType | undefined {
@@ -20,18 +27,32 @@ export function generateStaticParams() {
   return Array.from(TYPE_BY_SLUG.keys(), (type) => ({ type }));
 }
 
-async function ItemsGrid({ typeName, title }: { typeName: string; title: string }) {
+interface ItemsGridProps {
+  typeName: string;
+  title: string;
+  pathname: string;
+  searchParams: PageProps<"/items/[type]">["searchParams"];
+}
+
+async function ItemsGrid({ typeName, title, pathname, searchParams }: ItemsGridProps) {
   // Reads the current time via auth(), so render at request time, not prerender
   await connection();
   const session = await auth();
   if (!session?.user?.id) redirect("/sign-in");
 
-  const items = await getItemsByType(session.user.id, typeName);
+  const page = parsePage((await searchParams).page);
+  const { rows: items, total } = await getItemsByType(session.user.id, typeName, {
+    page,
+    perPage: ITEMS_PER_PAGE,
+  });
+
+  const pageCount = getPageCount(total, ITEMS_PER_PAGE);
+  if (page > pageCount) redirect(getPageHref(pathname, pageCount));
 
   return (
     <>
       <p className="text-muted-foreground">
-        {items.length} {items.length === 1 ? "item" : "items"}
+        {total} {total === 1 ? "item" : "items"}
       </p>
 
       {items.length > 0 && typeName === "file" ? (
@@ -55,6 +76,8 @@ async function ItemsGrid({ typeName, title }: { typeName: string; title: string 
           No {title.toLowerCase()} yet.
         </p>
       )}
+
+      <Pagination pathname={pathname} page={page} pageCount={pageCount} />
     </>
   );
 }
@@ -94,9 +117,8 @@ function ItemsGridSkeleton({ typeName }: { typeName: string }) {
 
 export default async function ItemsByTypePage({
   params,
-}: {
-  params: Promise<{ type: string }>;
-}) {
+  searchParams,
+}: PageProps<"/items/[type]">) {
   const { type } = await params;
   const typeName = TYPE_BY_SLUG.get(type);
 
@@ -119,7 +141,12 @@ export default async function ItemsByTypePage({
         )}
       </div>
       <Suspense fallback={<ItemsGridSkeleton typeName={typeName} />}>
-        <ItemsGrid typeName={typeName} title={title} />
+        <ItemsGrid
+          typeName={typeName}
+          title={title}
+          pathname={`/items/${type}`}
+          searchParams={searchParams}
+        />
       </Suspense>
     </div>
   );

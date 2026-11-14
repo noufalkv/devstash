@@ -4,20 +4,38 @@ import { Suspense } from "react";
 
 import { auth } from "@/auth";
 import { CollectionCard } from "@/components/dashboard/collection-card";
-import { getAllCollections } from "@/lib/db/collections";
+import { Pagination } from "@/components/shared/pagination";
+import { getCollectionsPage } from "@/lib/db/collections";
+import {
+  COLLECTIONS_PER_PAGE,
+  getPageCount,
+  getPageHref,
+  parsePage,
+} from "@/lib/pagination";
 
-async function CollectionsGrid() {
+const PATHNAME = "/collections";
+
+async function CollectionsGrid({
+  searchParams,
+}: Readonly<Pick<PageProps<"/collections">, "searchParams">>) {
   // Reads the current time via auth(), so render at request time, not prerender
   await connection();
   const session = await auth();
   if (!session?.user?.id) redirect("/sign-in");
 
-  const collections = await getAllCollections(session.user.id);
+  const page = parsePage((await searchParams).page);
+  const { rows: collections, total } = await getCollectionsPage(session.user.id, {
+    page,
+    perPage: COLLECTIONS_PER_PAGE,
+  });
+
+  const pageCount = getPageCount(total, COLLECTIONS_PER_PAGE);
+  if (page > pageCount) redirect(getPageHref(PATHNAME, pageCount));
 
   return (
     <>
       <p className="text-muted-foreground">
-        {collections.length} {collections.length === 1 ? "collection" : "collections"}
+        {total} {total === 1 ? "collection" : "collections"}
       </p>
 
       {collections.length > 0 ? (
@@ -29,6 +47,8 @@ async function CollectionsGrid() {
       ) : (
         <p className="text-sm text-muted-foreground">No collections yet.</p>
       )}
+
+      <Pagination pathname={PATHNAME} page={page} pageCount={pageCount} />
     </>
   );
 }
@@ -46,12 +66,12 @@ function CollectionsGridSkeleton() {
   );
 }
 
-export default function CollectionsPage() {
+export default function CollectionsPage({ searchParams }: PageProps<"/collections">) {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-3xl font-semibold">Collections</h1>
       <Suspense fallback={<CollectionsGridSkeleton />}>
-        <CollectionsGrid />
+        <CollectionsGrid searchParams={searchParams} />
       </Suspense>
     </div>
   );

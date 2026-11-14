@@ -1,6 +1,12 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { isRecordNotFound } from "@/lib/db/errors";
+import {
+  DASHBOARD_RECENT_ITEMS_LIMIT,
+  toSkipTake,
+  type PageRequest,
+  type Paginated,
+} from "@/lib/pagination";
 
 export interface ItemSummaryType {
   id: string;
@@ -67,13 +73,15 @@ const itemSummarySelect = {
   tags: { select: { name: true }, orderBy: { name: "asc" } },
 } satisfies Prisma.ItemSelect;
 
+// Newest first; the id tie-break keeps page boundaries stable when dates match
 async function findItemSummaries(
   userId: string,
-  args: Pick<Prisma.ItemFindManyArgs, "where" | "take">,
+  args: Pick<Prisma.ItemFindManyArgs, "where" | "skip" | "take">,
 ): Promise<ItemSummary[]> {
   const items = await prisma.item.findMany({
     where: { ...args.where, userId },
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    skip: args.skip,
     take: args.take,
     select: itemSummarySelect,
   });
@@ -82,6 +90,19 @@ async function findItemSummaries(
     ...item,
     tags: tags.map((tag) => tag.name),
   }));
+}
+
+// One page of the user's items matching `where`, plus the total across all pages
+async function findItemPage(
+  userId: string,
+  where: Prisma.ItemWhereInput,
+  page: PageRequest,
+): Promise<Paginated<ItemSummary>> {
+  const [rows, total] = await Promise.all([
+    findItemSummaries(userId, { where, ...toSkipTake(page) }),
+    prisma.item.count({ where: { ...where, userId } }),
+  ]);
+  return { rows, total };
 }
 
 export function getPinnedItems(
@@ -93,7 +114,7 @@ export function getPinnedItems(
 
 export function getRecentItems(
   userId: string,
-  limit = 10,
+  limit = DASHBOARD_RECENT_ITEMS_LIMIT,
 ): Promise<ItemSummary[]> {
   return findItemSummaries(userId, { take: limit });
 }
@@ -101,17 +122,21 @@ export function getRecentItems(
 export function getItemsByType(
   userId: string,
   typeName: string,
-): Promise<ItemSummary[]> {
-  return findItemSummaries(userId, { where: { itemType: { name: typeName } } });
+  page: PageRequest,
+): Promise<Paginated<ItemSummary>> {
+  return findItemPage(userId, { itemType: { name: typeName } }, page);
 }
 
 export function getItemsByCollection(
   userId: string,
   collectionId: string,
-): Promise<ItemSummary[]> {
-  return findItemSummaries(userId, {
-    where: { collections: { some: { collectionId } } },
-  });
+  page: PageRequest,
+): Promise<Paginated<ItemSummary>> {
+  return findItemPage(
+    userId,
+    { collections: { some: { collectionId } } },
+    page,
+  );
 }
 
 export interface SearchItem {

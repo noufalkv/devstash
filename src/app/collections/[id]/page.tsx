@@ -9,7 +9,14 @@ import { FileRow } from "@/components/items/file-row";
 import { ImageCard } from "@/components/items/image-card";
 import { ItemCard } from "@/components/items/item-card";
 import { ItemTypeIcon } from "@/components/items/item-type-icon";
+import { Pagination } from "@/components/shared/pagination";
 import { getCollection } from "@/lib/db/collections";
+import {
+  getPageCount,
+  getPageHref,
+  ITEMS_PER_PAGE,
+  parsePage,
+} from "@/lib/pagination";
 import {
   getItemsByCollection,
   SYSTEM_TYPE_ORDER,
@@ -24,22 +31,27 @@ const SECTION_ORDER = [
 
 async function CollectionDetail({
   params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
+  searchParams,
+}: Readonly<PageProps<"/collections/[id]">>) {
+  const [{ id }, query] = await Promise.all([params, searchParams]);
   // Reads the current time via auth(), so render at request time, not prerender
   await connection();
   const session = await auth();
   if (!session?.user?.id) redirect("/sign-in");
 
-  const [collection, items] = await Promise.all([
+  const page = parsePage(query.page);
+  const [collection, { rows: items, total }] = await Promise.all([
     getCollection(session.user.id, id),
-    getItemsByCollection(session.user.id, id),
+    getItemsByCollection(session.user.id, id, { page, perPage: ITEMS_PER_PAGE }),
   ]);
   if (!collection) notFound();
 
-  // One section per type, in sidebar order with files and images last; empty types are skipped
+  const pathname = `/collections/${id}`;
+  const pageCount = getPageCount(total, ITEMS_PER_PAGE);
+  if (page > pageCount) redirect(getPageHref(pathname, pageCount));
+
+  // This page's items, one section per type, in sidebar order with files and images last;
+  // empty types are skipped
   const sections = SECTION_ORDER.map((typeName) =>
     items.filter((item) => item.itemType.name === typeName),
   ).filter((sectionItems) => sectionItems.length > 0);
@@ -60,11 +72,11 @@ async function CollectionDetail({
           <p className="text-muted-foreground">{collection.description}</p>
         )}
         <p className="text-sm text-muted-foreground">
-          {items.length} {items.length === 1 ? "item" : "items"}
+          {total} {total === 1 ? "item" : "items"}
         </p>
       </div>
 
-      {items.length === 0 && (
+      {total === 0 && (
         <p className="text-sm text-muted-foreground">
           No items in this collection yet.
         </p>
@@ -73,6 +85,8 @@ async function CollectionDetail({
       {sections.map((sectionItems) => (
         <TypeSection key={sectionItems[0].itemType.id} items={sectionItems} />
       ))}
+
+      <Pagination pathname={pathname} page={page} pageCount={pageCount} />
     </div>
   );
 }
@@ -130,12 +144,11 @@ function CollectionDetailSkeleton() {
 
 export default function CollectionPage({
   params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+  searchParams,
+}: PageProps<"/collections/[id]">) {
   return (
     <Suspense fallback={<CollectionDetailSkeleton />}>
-      <CollectionDetail params={params} />
+      <CollectionDetail params={params} searchParams={searchParams} />
     </Suspense>
   );
 }

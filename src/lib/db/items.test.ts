@@ -27,10 +27,12 @@ import {
   getItemsByType,
   deleteItem,
   getPinnedItems,
+  getRecentItems,
   getSearchItems,
   SEARCH_PREVIEW_LENGTH,
   updateItem,
 } from "@/lib/db/items";
+import { DASHBOARD_RECENT_ITEMS_LIMIT } from "@/lib/pagination";
 
 const createdAt = new Date("2024-01-15T00:00:00Z");
 
@@ -106,7 +108,7 @@ describe("user scoping", () => {
   });
 
   it("filters items by type and user id", async () => {
-    await getItemsByType("user-1", "snippet");
+    await getItemsByType("user-1", "snippet", { page: 1, perPage: 21 });
 
     expect(findMany.mock.calls[0][0].where).toEqual({
       itemType: { name: "snippet" },
@@ -115,12 +117,64 @@ describe("user scoping", () => {
   });
 
   it("filters items by collection and user id", async () => {
-    await getItemsByCollection("user-1", "col-1");
+    await getItemsByCollection("user-1", "col-1", { page: 1, perPage: 21 });
 
     expect(findMany.mock.calls[0][0].where).toEqual({
       collections: { some: { collectionId: "col-1" } },
       userId: "user-1",
     });
+  });
+
+  it("takes the dashboard limit for recent items by default", async () => {
+    await getRecentItems("user-1");
+
+    expect(findMany.mock.calls[0][0].take).toBe(DASHBOARD_RECENT_ITEMS_LIMIT);
+  });
+});
+
+describe("paginated item lists", () => {
+  beforeEach(() => {
+    findMany.mockReset().mockResolvedValue([row]);
+    count.mockReset().mockResolvedValue(45);
+  });
+
+  it("fetches only the requested page of a type and the total", async () => {
+    const result = await getItemsByType("user-1", "snippet", {
+      page: 3,
+      perPage: 21,
+    });
+
+    expect(findMany.mock.calls[0][0]).toMatchObject({ skip: 42, take: 21 });
+    expect(count.mock.calls[0][0].where).toEqual({
+      itemType: { name: "snippet" },
+      userId: "user-1",
+    });
+    expect(result.total).toBe(45);
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0].tags).toEqual(["auth", "react"]);
+  });
+
+  it("fetches only the requested page of a collection and the total", async () => {
+    const result = await getItemsByCollection("user-1", "col-1", {
+      page: 1,
+      perPage: 21,
+    });
+
+    expect(findMany.mock.calls[0][0]).toMatchObject({ skip: 0, take: 21 });
+    expect(count.mock.calls[0][0].where).toEqual({
+      collections: { some: { collectionId: "col-1" } },
+      userId: "user-1",
+    });
+    expect(result.total).toBe(45);
+  });
+
+  it("orders by newest first with an id tie-break", async () => {
+    await getItemsByType("user-1", "snippet", { page: 1, perPage: 21 });
+
+    expect(findMany.mock.calls[0][0].orderBy).toEqual([
+      { createdAt: "desc" },
+      { id: "desc" },
+    ]);
   });
 
   it("counts only the user's items", async () => {
