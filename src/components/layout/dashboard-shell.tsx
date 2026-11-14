@@ -10,7 +10,7 @@ import { SidebarSkeleton } from "@/components/layout/sidebar-skeleton";
 import { TopBar } from "@/components/layout/top-bar";
 import { CommandPalette } from "@/components/search/command-palette";
 import { CommandPaletteProvider } from "@/components/search/command-palette-provider";
-import { getAllCollections, getSidebarCollections } from "@/lib/db/collections";
+import { getSidebarCollections } from "@/lib/db/collections";
 import { getSearchItems, getUserItemTypeCounts } from "@/lib/db/items";
 import { getSidebarUser } from "@/lib/db/users";
 
@@ -40,7 +40,7 @@ async function SearchPalette() {
 
   const [items, collections] = await Promise.all([
     getSearchItems(userId),
-    getAllCollections(userId),
+    getSidebarCollections(userId),
   ]);
 
   return (

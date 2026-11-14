@@ -1,5 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { isRecordNotFound } from "@/lib/db/errors";
+import {
+  DASHBOARD_COLLECTIONS_LIMIT,
+  toSkipTake,
+  type PageRequest,
+  type Paginated,
+} from "@/lib/pagination";
 
 export interface CollectionItemType {
   id: string;
@@ -24,14 +30,16 @@ export interface CollectionStats {
   favorites: number;
 }
 
-// Ordered by updatedAt, most recent first; all collections when take is omitted
+// Ordered by updatedAt, most recent first (id breaks ties so pages stay stable);
+// all collections when take is omitted
 async function findCollectionSummaries(
   userId: string,
-  take?: number,
+  { skip, take }: { skip?: number; take?: number } = {},
 ): Promise<CollectionSummary[]> {
   const collections = await prisma.collection.findMany({
     where: { userId },
-    orderBy: { updatedAt: "desc" },
+    orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+    skip,
     take,
     select: {
       id: true,
@@ -70,21 +78,28 @@ async function findCollectionSummaries(
 
 export function getRecentCollections(
   userId: string,
-  limit = 6,
+  limit = DASHBOARD_COLLECTIONS_LIMIT,
 ): Promise<CollectionSummary[]> {
-  return findCollectionSummaries(userId, limit);
+  return findCollectionSummaries(userId, { take: limit });
 }
 
+// Every collection the user owns, for the sidebar and the command palette
 export function getSidebarCollections(
   userId: string,
 ): Promise<CollectionSummary[]> {
   return findCollectionSummaries(userId);
 }
 
-export function getAllCollections(
+// One page of the user's collections, plus the total across all pages
+export async function getCollectionsPage(
   userId: string,
-): Promise<CollectionSummary[]> {
-  return findCollectionSummaries(userId);
+  page: PageRequest,
+): Promise<Paginated<CollectionSummary>> {
+  const [rows, total] = await Promise.all([
+    findCollectionSummaries(userId, toSkipTake(page)),
+    prisma.collection.count({ where: { userId } }),
+  ]);
+  return { rows, total };
 }
 
 export interface CollectionHeader {
