@@ -2,24 +2,25 @@
 
 import { Pin, Star } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { useItemDrawer } from "@/components/items/item-drawer-provider";
+import { ItemTypeIcon } from "@/components/items/item-type-icon";
 import { QuickCopyButton } from "@/components/items/quick-copy-button";
+import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import type { ItemSummary } from "@/lib/db/items";
+import { formatDate } from "@/lib/format-date";
 import { getCopyText } from "@/lib/item-copy";
-import { ITEM_TYPE_ICONS } from "@/lib/item-type-icons";
+import { cn } from "@/lib/utils";
 
-const dateFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  timeZone: "UTC",
-});
+interface ItemCardProps {
+  item: ItemSummary;
+  /** "grid" fills its grid cell and clamps the description to two lines; "row" is a single-line list row. */
+  variant?: "grid" | "row";
+}
 
-export function ItemCard({ item }: { item: ItemSummary }) {
+/** An item summary that opens the item drawer when clicked. */
+export function ItemCard({ item, variant = "grid" }: ItemCardProps) {
   const { openItem } = useItemDrawer();
-  const { color } = item.itemType;
-  const Icon = ITEM_TYPE_ICONS[item.itemType.icon];
   const copyText = getCopyText(item);
 
   return (
@@ -34,23 +35,13 @@ export function ItemCard({ item }: { item: ItemSummary }) {
           openItem(item.id);
         }
       }}
-      className="group/item h-full cursor-pointer flex-row items-start gap-3 border-l-4 border-l-border px-3 transition-colors hover:bg-muted/40"
-      style={{ borderLeftColor: color }}
+      className={cn(
+        "group/item cursor-pointer flex-row items-start gap-3 border-l-4 border-l-border px-3 transition-colors hover:bg-muted/40",
+        variant === "grid" && "h-full",
+      )}
+      style={{ borderLeftColor: item.itemType.color }}
     >
-      <div
-        className="flex size-9 shrink-0 items-center justify-center rounded-lg"
-        style={{
-          backgroundColor: `color-mix(in srgb, ${color} 10%, transparent)`,
-        }}
-      >
-        {Icon && (
-          <Icon
-            className="size-4"
-            style={{ color }}
-            aria-label={item.itemType.name}
-          />
-        )}
-      </div>
+      <ItemTypeIcon itemType={item.itemType} labelled />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <p className="truncate text-sm font-medium">{item.title}</p>
@@ -62,7 +53,12 @@ export function ItemCard({ item }: { item: ItemSummary }) {
           )}
         </div>
         {item.description && (
-          <p className="line-clamp-2 text-sm text-muted-foreground">
+          <p
+            className={cn(
+              "text-sm text-muted-foreground",
+              variant === "grid" ? "line-clamp-2" : "truncate",
+            )}
+          >
             {item.description}
           </p>
         )}
@@ -79,7 +75,7 @@ export function ItemCard({ item }: { item: ItemSummary }) {
       <div className="flex shrink-0 items-center gap-1">
         {copyText && <QuickCopyButton text={copyText} title={item.title} />}
         <span className="text-xs text-muted-foreground">
-          {dateFormatter.format(item.createdAt)}
+          {formatDate(item.createdAt, "short")}
         </span>
       </div>
     </Card>

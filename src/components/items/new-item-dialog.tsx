@@ -6,9 +6,9 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { createItem } from "@/actions/items";
-import { CodeEditor } from "@/components/items/code-editor";
 import { FileUpload } from "@/components/items/file-upload";
-import { MarkdownEditor } from "@/components/items/markdown-editor";
+import { FormField } from "@/components/items/form-field";
+import { ItemContentField } from "@/components/items/item-content-field";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,11 +18,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  CODE_EDITOR_TYPES,
-  MARKDOWN_EDITOR_TYPES,
   CONTENT_TYPES,
   CREATABLE_ITEM_TYPES,
   LANGUAGE_TYPES,
@@ -32,19 +29,31 @@ import {
 import { isFileItemType } from "@/lib/file-upload";
 import type { ItemFileData } from "@/lib/db/items";
 
-function Field({
-  id,
-  label,
-  children,
+function ItemTypePicker({
+  value,
+  onChange,
+  disabled,
 }: {
-  id: string;
-  label: string;
-  children: React.ReactNode;
+  value: CreatableItemType;
+  onChange: (type: CreatableItemType) => void;
+  disabled: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-2">
-      <Label htmlFor={id}>{label}</Label>
-      {children}
+    <div className="flex flex-wrap gap-1.5" role="group" aria-label="Type">
+      {CREATABLE_ITEM_TYPES.map((name) => (
+        <Button
+          key={name}
+          type="button"
+          size="sm"
+          variant={value === name ? "default" : "outline"}
+          aria-pressed={value === name}
+          className="capitalize"
+          disabled={disabled}
+          onClick={() => onChange(name)}
+        >
+          {name}
+        </Button>
+      ))}
     </div>
   );
 }
@@ -104,46 +113,34 @@ function NewItemForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Type">
-        {CREATABLE_ITEM_TYPES.map((name) => (
-          <Button
-            key={name}
-            type="button"
-            size="sm"
-            variant={type === name ? "default" : "outline"}
-            aria-pressed={type === name}
-            className="capitalize"
-            disabled={isPending}
-            onClick={() => {
-              setType(name);
-              setFile(null);
-            }}
-          >
-            {name}
-          </Button>
-        ))}
-      </div>
+      <ItemTypePicker
+        value={type}
+        disabled={isPending}
+        onChange={(name) => {
+          setType(name);
+          setFile(null);
+        }}
+      />
 
-      <Field id="new-item-title" label="Title">
+      <FormField id="new-item-title" label="Title">
         <Input
           id="new-item-title"
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           required
         />
-      </Field>
+      </FormField>
 
-      <Field id="new-item-description" label="Description">
+      <FormField id="new-item-description" label="Description">
         <Textarea
           id="new-item-description"
           value={description}
           onChange={(event) => setDescription(event.target.value)}
         />
-      </Field>
+      </FormField>
 
       {fileType && (
-        <div className="flex flex-col gap-2">
-          <Label>File</Label>
+        <FormField label="File">
           <FileUpload
             key={fileType}
             type={fileType}
@@ -151,62 +148,50 @@ function NewItemForm({
             onChange={setFile}
             disabled={isPending}
           />
-        </div>
+        </FormField>
       )}
 
       {showContent && (
-        <Field id="new-item-content" label="Content">
-          {CODE_EDITOR_TYPES.has(type) ? (
-            <CodeEditor
-              value={content}
-              onChange={setContent}
-              language={language}
-            />
-          ) : MARKDOWN_EDITOR_TYPES.has(type) ? (
-            <MarkdownEditor
-              id="new-item-content"
-              value={content}
-              onChange={setContent}
-            />
-          ) : (
-            <Textarea
-              id="new-item-content"
-              className="min-h-32 font-mono text-xs"
-              value={content}
-              onChange={(event) => setContent(event.target.value)}
-            />
-          )}
-        </Field>
+        <FormField id="new-item-content" label="Content">
+          <ItemContentField
+            id="new-item-content"
+            typeName={type}
+            value={content}
+            onChange={setContent}
+            language={language}
+            textareaClassName="min-h-32"
+          />
+        </FormField>
       )}
 
       {showLanguage && (
-        <Field id="new-item-language" label="Language">
+        <FormField id="new-item-language" label="Language">
           <Input
             id="new-item-language"
             value={language}
             onChange={(event) => setLanguage(event.target.value)}
           />
-        </Field>
+        </FormField>
       )}
 
       {showUrl && (
-        <Field id="new-item-url" label="URL">
+        <FormField id="new-item-url" label="URL">
           <Input
             id="new-item-url"
             value={url}
             onChange={(event) => setUrl(event.target.value)}
             required
           />
-        </Field>
+        </FormField>
       )}
 
-      <Field id="new-item-tags" label="Tags (comma-separated)">
+      <FormField id="new-item-tags" label="Tags (comma-separated)">
         <Input
           id="new-item-tags"
           value={tags}
           onChange={(event) => setTags(event.target.value)}
         />
-      </Field>
+      </FormField>
 
       <Button type="submit" disabled={isPending || !canSubmit}>
         {isPending ? "Creating..." : "Create item"}

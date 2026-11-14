@@ -1,24 +1,16 @@
 "use client";
 
-import {
-  Calendar,
-  Copy,
-  Download,
-  FolderOpen,
-  Pencil,
-  Pin,
-  Star,
-  Tag,
-} from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
 
-import { CodeEditor } from "@/components/items/code-editor";
-import { MarkdownEditor } from "@/components/items/markdown-editor";
-import { ItemDeleteDialog } from "@/components/items/item-delete-dialog";
+import { ItemDetailHeader } from "@/components/items/item-detail-header";
+import {
+  ItemBodySection,
+  ItemCollectionsSection,
+  ItemDatesSection,
+  ItemDescriptionSection,
+  ItemTagsSection,
+} from "@/components/items/item-detail-sections";
 import { ItemEditForm } from "@/components/items/item-edit-form";
-import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
@@ -28,11 +20,6 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import type { ItemDetail } from "@/lib/db/items";
-import { getCopyText } from "@/lib/item-copy";
-import { formatFileSize } from "@/lib/file-upload";
-import { CODE_EDITOR_TYPES, MARKDOWN_EDITOR_TYPES } from "@/lib/item-fields";
-import { ITEM_TYPE_ICONS } from "@/lib/item-type-icons";
-import { cn } from "@/lib/utils";
 
 export type ItemDetailJson = Omit<ItemDetail, "createdAt" | "updatedAt"> & {
   createdAt: string;
@@ -43,39 +30,6 @@ export type DrawerState =
   | { status: "loading" }
   | { status: "error"; message: string }
   | { status: "ready"; item: ItemDetailJson };
-
-const dateFormatter = new Intl.DateTimeFormat("en-US", {
-  year: "numeric",
-  month: "long",
-  day: "numeric",
-  timeZone: "UTC",
-});
-
-function ActionButton({
-  icon: Icon,
-  label,
-  className,
-  iconClassName,
-  onClick,
-}: {
-  icon: typeof Star;
-  label: string;
-  className?: string;
-  iconClassName?: string;
-  onClick?: () => void;
-}) {
-  return (
-    <Button
-      variant="ghost"
-      size="sm"
-      className={className}
-      onClick={onClick}
-    >
-      <Icon className={iconClassName} />
-      {label}
-    </Button>
-  );
-}
 
 function DrawerSkeleton() {
   return (
@@ -95,21 +49,6 @@ function DrawerSkeleton() {
   );
 }
 
-function SectionLabel({
-  icon: Icon,
-  children,
-}: {
-  icon?: typeof Tag;
-  children: React.ReactNode;
-}) {
-  return (
-    <h3 className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-      {Icon && <Icon className="size-4" />}
-      {children}
-    </h3>
-  );
-}
-
 function ItemDetailView({
   item,
   onUpdated,
@@ -120,19 +59,6 @@ function ItemDetailView({
   onDeleted: () => void;
 }) {
   const [isEditing, setIsEditing] = useState(false);
-  const { color } = item.itemType;
-  const Icon = ITEM_TYPE_ICONS[item.itemType.icon];
-  const copyText = getCopyText(item);
-
-  async function handleCopy() {
-    if (!copyText) return;
-    try {
-      await navigator.clipboard.writeText(copyText);
-      toast.success("Copied to clipboard");
-    } catch {
-      toast.error("Could not copy to clipboard");
-    }
-  }
 
   if (isEditing) {
     return (
@@ -149,176 +75,18 @@ function ItemDetailView({
 
   return (
     <>
-      <SheetHeader className="gap-4 border-b p-4 pr-12">
-        <div className="flex items-center gap-3">
-          <div
-            className="flex size-10 shrink-0 items-center justify-center rounded-lg"
-            style={{
-              backgroundColor: `color-mix(in srgb, ${color} 10%, transparent)`,
-            }}
-          >
-            {Icon && <Icon className="size-5" style={{ color }} />}
-          </div>
-          <div className="min-w-0">
-            <SheetTitle className="truncate text-lg">{item.title}</SheetTitle>
-            <div className="mt-1 flex flex-wrap gap-1.5">
-              <Badge variant="secondary" className="capitalize">
-                {item.itemType.name}
-              </Badge>
-              {item.language && <Badge variant="outline">{item.language}</Badge>}
-            </div>
-          </div>
-        </div>
-        <SheetDescription className="sr-only">
-          Details for {item.title}
-        </SheetDescription>
-
-        <div className="flex items-center gap-1">
-          <ActionButton
-            icon={Star}
-            label="Favorite"
-            className={cn(item.isFavorite && "text-yellow-400")}
-            iconClassName={cn(item.isFavorite && "fill-yellow-400")}
-          />
-          <ActionButton
-            icon={Pin}
-            label="Pin"
-            className={cn(item.isPinned && "text-foreground")}
-            iconClassName={cn(item.isPinned && "fill-current")}
-          />
-          {copyText && (
-            <ActionButton icon={Copy} label="Copy" onClick={handleCopy} />
-          )}
-          {item.contentType === "FILE" && (
-            <a
-              href={`/api/download/${item.id}`}
-              download
-              className={buttonVariants({ variant: "ghost", size: "sm" })}
-            >
-              <Download />
-              Download
-            </a>
-          )}
-          <div className="ml-auto flex items-center gap-1">
-            <ActionButton
-              icon={Pencil}
-              label="Edit"
-              onClick={() => setIsEditing(true)}
-            />
-            <ItemDeleteDialog
-              itemId={item.id}
-              title={item.title}
-              onDeleted={onDeleted}
-            />
-          </div>
-        </div>
-      </SheetHeader>
-
+      <ItemDetailHeader
+        item={item}
+        onEdit={() => setIsEditing(true)}
+        onDeleted={onDeleted}
+      />
       <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-4">
-        {item.description && (
-          <section className="flex flex-col gap-2">
-            <SectionLabel>Description</SectionLabel>
-            <p>{item.description}</p>
-          </section>
-        )}
-
-        {item.contentType === "TEXT" && item.content && (
-          <section className="flex flex-col gap-2">
-            <SectionLabel>Content</SectionLabel>
-            {CODE_EDITOR_TYPES.has(item.itemType.name) ? (
-              <CodeEditor
-                value={item.content}
-                language={item.language}
-                readOnly
-              />
-            ) : MARKDOWN_EDITOR_TYPES.has(item.itemType.name) ? (
-              <MarkdownEditor value={item.content} readOnly />
-            ) : (
-              <pre className="overflow-x-auto rounded-lg bg-muted p-4 font-mono text-xs leading-relaxed whitespace-pre">
-                {item.content}
-              </pre>
-            )}
-          </section>
-        )}
-
-        {item.contentType === "URL" && item.url && (
-          <section className="flex flex-col gap-2">
-            <SectionLabel>URL</SectionLabel>
-            <a
-              href={item.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="break-all text-primary underline-offset-4 hover:underline"
-            >
-              {item.url}
-            </a>
-          </section>
-        )}
-
-        {item.contentType === "FILE" && item.fileName && (
-          <section className="flex flex-col gap-2">
-            <SectionLabel>{item.itemType.name === "image" ? "Image" : "File"}</SectionLabel>
-            {item.itemType.name === "image" && (
-              // eslint-disable-next-line @next/next/no-img-element -- served by the authenticated download proxy
-              <img
-                src={`/api/download/${item.id}?inline=1`}
-                alt={item.title}
-                className="max-h-80 w-full rounded-lg border bg-muted object-contain"
-              />
-            )}
-            <p className="break-all">
-              {item.fileName}
-              {item.fileSize !== null && (
-                <span className="text-muted-foreground">
-                  {" "}
-                  ({formatFileSize(item.fileSize)})
-                </span>
-              )}
-            </p>
-          </section>
-        )}
-
+        <ItemDescriptionSection description={item.description} />
+        <ItemBodySection item={item} />
         <Separator />
-
-        {item.tags.length > 0 && (
-          <section className="flex flex-col gap-2">
-            <SectionLabel icon={Tag}>Tags</SectionLabel>
-            <div className="flex flex-wrap gap-1.5">
-              {item.tags.map((tag) => (
-                <Badge key={tag} variant="secondary">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {item.collections.length > 0 && (
-          <section className="flex flex-col gap-2">
-            <SectionLabel icon={FolderOpen}>Collections</SectionLabel>
-            <div className="flex flex-wrap gap-1.5">
-              {item.collections.map((collection) => (
-                <Badge key={collection.id} variant="outline">
-                  {collection.name}
-                </Badge>
-              ))}
-            </div>
-          </section>
-        )}
-
-        <section className="flex flex-col gap-2">
-          <SectionLabel icon={Calendar}>Details</SectionLabel>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1">
-            <dt className="text-muted-foreground">Created</dt>
-            <dd className="text-right">
-              {dateFormatter.format(new Date(item.createdAt))}
-            </dd>
-            <dt className="text-muted-foreground">Updated</dt>
-            <dd className="text-right">
-              {dateFormatter.format(new Date(item.updatedAt))}
-            </dd>
-          </dl>
-        </section>
+        <ItemTagsSection tags={item.tags} />
+        <ItemCollectionsSection collections={item.collections} />
+        <ItemDatesSection createdAt={item.createdAt} updatedAt={item.updatedAt} />
       </div>
     </>
   );
