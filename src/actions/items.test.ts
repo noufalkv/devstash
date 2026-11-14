@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   createItem: vi.fn(),
   getItemFile: vi.fn(),
   deleteFromR2: vi.fn(),
+  findOwnedCollectionIds: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
@@ -15,6 +16,9 @@ vi.mock("@/lib/db/items", () => ({
   deleteItem: mocks.deleteItem,
   createItem: mocks.createItem,
   getItemFile: mocks.getItemFile,
+}));
+vi.mock("@/lib/db/collections", () => ({
+  findOwnedCollectionIds: mocks.findOwnedCollectionIds,
 }));
 vi.mock("@/lib/r2", () => ({
   deleteFromR2: mocks.deleteFromR2,
@@ -40,6 +44,11 @@ beforeEach(() => {
   mocks.updateItem.mockResolvedValue(updatedItem);
   mocks.getItemFile.mockResolvedValue(null);
   mocks.deleteFromR2.mockResolvedValue(undefined);
+  // Every collection belongs to u1 except ones prefixed "other-"
+  mocks.findOwnedCollectionIds.mockImplementation(
+    async (_userId: string, ids: string[]) =>
+      ids.filter((id) => !id.startsWith("other-")),
+  );
 });
 
 describe("updateItem", () => {
@@ -85,6 +94,7 @@ describe("updateItem", () => {
       url: null,
       language: "typescript",
       tags: ["react", "auth"],
+      collectionIds: [],
     });
   });
 
@@ -105,7 +115,47 @@ describe("updateItem", () => {
       url: "https://example.com",
       language: null,
       tags: [],
+      collectionIds: [],
     });
+  });
+
+  it("passes only de-duplicated collection ids the user owns", async () => {
+    await updateItem("item-1", {
+      ...validData,
+      collectionIds: ["col-1", "col-2", "col-1", "other-col"],
+    });
+
+    expect(mocks.findOwnedCollectionIds).toHaveBeenCalledWith("u1", [
+      "col-1",
+      "col-2",
+      "other-col",
+    ]);
+    expect(mocks.updateItem.mock.calls[0][2].collectionIds).toEqual([
+      "col-1",
+      "col-2",
+    ]);
+  });
+
+  it("passes an empty list to remove the item from every collection", async () => {
+    await updateItem("item-1", { ...validData, collectionIds: [] });
+
+    expect(mocks.updateItem.mock.calls[0][2].collectionIds).toEqual([]);
+  });
+
+  it("returns a generic error when the collection lookup fails", async () => {
+    mocks.findOwnedCollectionIds.mockRejectedValue(new Error("db down"));
+
+    expect(
+      await updateItem("item-1", { ...validData, collectionIds: ["col-1"] }),
+    ).toEqual({ success: false, error: "Something went wrong. Please try again." });
+    expect(mocks.updateItem).not.toHaveBeenCalled();
+  });
+
+  it("rejects collection ids of the wrong shape", async () => {
+    const result = await updateItem("item-1", { ...validData, collectionIds: [""] });
+
+    expect(result.success).toBe(false);
+    expect(mocks.updateItem).not.toHaveBeenCalled();
   });
 
   it("returns an error when the item is not found or not owned", async () => {
@@ -236,7 +286,21 @@ describe("createItem", () => {
       url: null,
       file: null,
       tags: ["react", "auth"],
+      collectionIds: [],
     });
+  });
+
+  it("adds the item to the collections the user owns", async () => {
+    await createItem({
+      ...snippet,
+      collectionIds: ["col-1", "other-col", "col-1"],
+    });
+
+    expect(mocks.findOwnedCollectionIds).toHaveBeenCalledWith("u1", [
+      "col-1",
+      "other-col",
+    ]);
+    expect(mocks.createItem.mock.calls[0][1].collectionIds).toEqual(["col-1"]);
   });
 
   it("drops fields the type does not use", async () => {

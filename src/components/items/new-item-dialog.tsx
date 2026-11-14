@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { createItem } from "@/actions/items";
+import { CollectionPicker } from "@/components/items/collection-picker";
 import { FileUpload } from "@/components/items/file-upload";
 import { FormField } from "@/components/items/form-field";
 import { ItemContentField } from "@/components/items/item-content-field";
@@ -75,6 +76,7 @@ function NewItemForm({
   const [url, setUrl] = useState("");
   const [tags, setTags] = useState("");
   const [file, setFile] = useState<ItemFileData | null>(null);
+  const [collectionIds, setCollectionIds] = useState<string[]>([]);
 
   const showContent = CONTENT_TYPES.has(type);
   const showLanguage = LANGUAGE_TYPES.has(type);
@@ -98,6 +100,7 @@ function NewItemForm({
         url: showUrl ? url : "",
         file: fileType ? file : null,
         tags: tags.split(","),
+        collectionIds,
       });
 
       if (!result.success) {
@@ -190,6 +193,15 @@ function NewItemForm({
           id="new-item-tags"
           value={tags}
           onChange={(event) => setTags(event.target.value)}
+        />
+      </FormField>
+
+      <FormField id="new-item-collections" label="Collections">
+        <CollectionPicker
+          id="new-item-collections"
+          value={collectionIds}
+          onChange={setCollectionIds}
+          disabled={isPending}
         />
       </FormField>
 

@@ -7,10 +7,8 @@ import { toast } from "sonner";
 import { updateItem } from "@/actions/items";
 import { FormField } from "@/components/items/form-field";
 import { ItemContentField } from "@/components/items/item-content-field";
-import {
-  ItemCollectionsSection,
-  ItemDatesSection,
-} from "@/components/items/item-detail-sections";
+import { CollectionPicker } from "@/components/items/collection-picker";
+import { ItemDatesSection } from "@/components/items/item-detail-sections";
 import type { ItemDetailJson } from "@/components/items/item-drawer";
 import { ItemTypeIcon } from "@/components/items/item-type-icon";
 import { Badge } from "@/components/ui/badge";
@@ -75,6 +73,9 @@ export function ItemEditForm({ item, onCancel, onSaved }: ItemEditFormProps) {
   const [language, setLanguage] = useState(item.language ?? "");
   const [url, setUrl] = useState(item.url ?? "");
   const [tags, setTags] = useState(item.tags.join(", "));
+  const [collectionIds, setCollectionIds] = useState(
+    item.collections.map((collection) => collection.id),
+  );
 
   const typeName = item.itemType.name;
   const showContent = item.contentType === "TEXT" && CONTENT_TYPES.has(typeName);
@@ -91,6 +92,7 @@ export function ItemEditForm({ item, onCancel, onSaved }: ItemEditFormProps) {
         language: showLanguage ? language : item.language,
         url: showUrl ? url : item.url,
         tags: tags.split(","),
+        collectionIds,
       });
 
       if (!result.success || !result.data) {
@@ -177,7 +179,15 @@ export function ItemEditForm({ item, onCancel, onSaved }: ItemEditFormProps) {
           />
         </FormField>
 
-        <ItemCollectionsSection collections={item.collections} />
+        <FormField id="item-collections" label="Collections">
+          <CollectionPicker
+            id="item-collections"
+            value={collectionIds}
+            onChange={setCollectionIds}
+            disabled={isPending}
+          />
+        </FormField>
+
         <ItemDatesSection createdAt={item.createdAt} updatedAt={item.updatedAt} />
       </div>
     </>

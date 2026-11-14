@@ -80,6 +80,33 @@ export function getSidebarCollections(
   return findCollectionSummaries(userId);
 }
 
+export interface CollectionOption {
+  id: string;
+  name: string;
+}
+
+// The user's collections for pickers, sorted by name
+export function getCollectionOptions(userId: string): Promise<CollectionOption[]> {
+  return prisma.collection.findMany({
+    where: { userId },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  });
+}
+
+// The subset of ids that belong to collections owned by the user
+export async function findOwnedCollectionIds(
+  userId: string,
+  ids: string[],
+): Promise<string[]> {
+  if (ids.length === 0) return [];
+  const owned = await prisma.collection.findMany({
+    where: { userId, id: { in: ids } },
+    select: { id: true },
+  });
+  return owned.map((collection) => collection.id);
+}
+
 export interface CreateCollectionData {
   name: string;
   description: string | null;
