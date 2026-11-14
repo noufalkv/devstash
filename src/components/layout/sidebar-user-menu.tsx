@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronsUpDown, LogOut } from "lucide-react";
+import { ChevronsUpDown, LogOut, Settings } from "lucide-react";
 
 import { signOutUser } from "@/actions/auth";
 import { UserAvatar } from "@/components/shared/user-avatar";
@@ -19,7 +19,7 @@ interface SidebarUserMenuProps {
   onNavigate?: () => void;
 }
 
-/** Sidebar footer: the signed-in user linking to /profile, and a menu with "Sign out". */
+/** Sidebar footer: the signed-in user linking to /profile, and a menu with "Settings" and "Sign out". */
 export function SidebarUserMenu({ user, onNavigate }: SidebarUserMenuProps) {
   const displayName = user?.name ?? user?.email ?? "Guest";
 
@@ -46,6 +46,10 @@ export function SidebarUserMenu({ user, onNavigate }: SidebarUserMenuProps) {
           <ChevronsUpDown className="size-4" />
         </DropdownMenuTrigger>
         <DropdownMenuContent side="top" align="end" className="w-40">
+          <DropdownMenuItem render={<Link href="/settings" />} onClick={onNavigate}>
+            <Settings className="size-4" />
+            Settings
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => signOutUser()}>
             <LogOut className="size-4" />
             Sign out

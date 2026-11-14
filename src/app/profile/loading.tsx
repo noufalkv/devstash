@@ -9,7 +9,6 @@ export default function ProfileLoading() {
         ))}
       </div>
       <div className="h-64 rounded-xl bg-muted" />
-      <div className="h-36 rounded-xl bg-muted" />
     </div>
   );
 }
