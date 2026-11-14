@@ -6,7 +6,10 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { createCollection } from "@/actions/collections";
-import { FormField } from "@/components/items/form-field";
+import {
+  CollectionForm,
+  type CollectionFormValues,
+} from "@/components/collections/collection-form";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,19 +18,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 
 function NewCollectionForm({ onCreated }: { onCreated: () => void }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
 
-  function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
+  function handleSubmit(values: CollectionFormValues) {
     startTransition(async () => {
-      const result = await createCollection({ name, description });
+      const result = await createCollection(values);
 
       if (!result.success) {
         toast.error(result.error ?? "Could not create collection");
@@ -41,28 +39,13 @@ function NewCollectionForm({ onCreated }: { onCreated: () => void }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <FormField id="new-collection-name" label="Name">
-        <Input
-          id="new-collection-name"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          required
-        />
-      </FormField>
-
-      <FormField id="new-collection-description" label="Description">
-        <Textarea
-          id="new-collection-description"
-          value={description}
-          onChange={(event) => setDescription(event.target.value)}
-        />
-      </FormField>
-
-      <Button type="submit" disabled={isPending || name.trim() === ""}>
-        {isPending ? "Creating..." : "Create collection"}
-      </Button>
-    </form>
+    <CollectionForm
+      idPrefix="new-collection"
+      isPending={isPending}
+      submitLabel="Create collection"
+      pendingLabel="Creating..."
+      onSubmit={handleSubmit}
+    />
   );
 }
 

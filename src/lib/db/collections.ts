@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { isRecordNotFound } from "@/lib/db/errors";
 
 export interface CollectionItemType {
   id: string;
@@ -146,6 +147,41 @@ export async function createCollection(
   });
 
   return { ...collection, itemCount: 0, itemTypes: [] };
+}
+
+export type UpdateCollectionData = CreateCollectionData;
+
+// Updates one of the user's collections; null when missing or owned by someone else
+export async function updateCollection(
+  userId: string,
+  id: string,
+  data: UpdateCollectionData,
+): Promise<CollectionHeader | null> {
+  try {
+    return await prisma.collection.update({
+      where: { id, userId },
+      data: { name: data.name, description: data.description },
+      select: { id: true, name: true, description: true, isFavorite: true },
+    });
+  } catch (error) {
+    if (isRecordNotFound(error)) return null;
+    throw error;
+  }
+}
+
+// Deletes one of the user's collections. Items are kept: only their
+// ItemCollection rows go, through the cascade on the join table.
+export async function deleteCollection(
+  userId: string,
+  id: string,
+): Promise<boolean> {
+  try {
+    await prisma.collection.delete({ where: { id, userId } });
+    return true;
+  } catch (error) {
+    if (isRecordNotFound(error)) return false;
+    throw error;
+  }
 }
 
 export async function getCollectionStats(

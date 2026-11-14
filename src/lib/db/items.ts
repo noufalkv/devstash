@@ -1,5 +1,6 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
+import { isRecordNotFound } from "@/lib/db/errors";
 
 export interface ItemSummaryType {
   id: string;
@@ -270,15 +271,6 @@ export async function deleteItem(id: string, userId: string): Promise<boolean> {
     if (isRecordNotFound(error)) return false;
     throw error;
   }
-}
-
-function isRecordNotFound(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    error.code === "P2025"
-  );
 }
 
 export async function getItemStats(userId: string): Promise<ItemStats> {

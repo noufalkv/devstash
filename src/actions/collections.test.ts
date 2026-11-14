@@ -4,15 +4,24 @@ const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
   createCollection: vi.fn(),
   getCollectionOptions: vi.fn(),
+  updateCollection: vi.fn(),
+  deleteCollection: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
 vi.mock("@/lib/db/collections", () => ({
   createCollection: mocks.createCollection,
   getCollectionOptions: mocks.getCollectionOptions,
+  updateCollection: mocks.updateCollection,
+  deleteCollection: mocks.deleteCollection,
 }));
 
-import { createCollection, listCollectionOptions } from "./collections";
+import {
+  createCollection,
+  deleteCollection,
+  listCollectionOptions,
+  updateCollection,
+} from "./collections";
 
 const created = {
   id: "col-1",
@@ -111,6 +120,123 @@ describe("listCollectionOptions", () => {
     expect(await listCollectionOptions()).toEqual({
       success: false,
       error: "Could not load collections",
+    });
+  });
+});
+
+describe("updateCollection", () => {
+  const updated = {
+    id: "col-1",
+    name: "React Hooks",
+    description: null,
+    isFavorite: false,
+  };
+
+  beforeEach(() => {
+    mocks.updateCollection.mockResolvedValue(updated);
+  });
+
+  it("requires a session", async () => {
+    mocks.auth.mockResolvedValue(null);
+
+    expect(await updateCollection("col-1", { name: "React Hooks" })).toEqual({
+      success: false,
+      error: "You must be signed in",
+    });
+    expect(mocks.updateCollection).not.toHaveBeenCalled();
+  });
+
+  it("rejects an invalid id", async () => {
+    expect(await updateCollection("", { name: "React Hooks" })).toEqual({
+      success: false,
+      error: "Invalid collection",
+    });
+    expect(mocks.updateCollection).not.toHaveBeenCalled();
+  });
+
+  it("rejects an empty name", async () => {
+    expect(await updateCollection("col-1", { name: "  " })).toEqual({
+      success: false,
+      error: "Name is required",
+    });
+    expect(mocks.updateCollection).not.toHaveBeenCalled();
+  });
+
+  it("trims fields and updates the signed-in user's collection", async () => {
+    const result = await updateCollection("col-1", {
+      name: "  React Hooks  ",
+      description: "   ",
+    });
+
+    expect(mocks.updateCollection).toHaveBeenCalledWith("u1", "col-1", {
+      name: "React Hooks",
+      description: null,
+    });
+    expect(result).toEqual({ success: true, data: updated });
+  });
+
+  it("returns not found when the collection is missing or not owned", async () => {
+    mocks.updateCollection.mockResolvedValue(null);
+
+    expect(await updateCollection("col-other", { name: "React Hooks" })).toEqual({
+      success: false,
+      error: "Collection not found",
+    });
+  });
+
+  it("returns a friendly error when the database fails", async () => {
+    mocks.updateCollection.mockRejectedValue(new Error("db down"));
+
+    expect(await updateCollection("col-1", { name: "React Hooks" })).toEqual({
+      success: false,
+      error: "Something went wrong. Please try again.",
+    });
+  });
+});
+
+describe("deleteCollection", () => {
+  beforeEach(() => {
+    mocks.deleteCollection.mockResolvedValue(true);
+  });
+
+  it("requires a session", async () => {
+    mocks.auth.mockResolvedValue(null);
+
+    expect(await deleteCollection("col-1")).toEqual({
+      success: false,
+      error: "You must be signed in",
+    });
+    expect(mocks.deleteCollection).not.toHaveBeenCalled();
+  });
+
+  it("rejects an invalid id", async () => {
+    expect(await deleteCollection(42)).toEqual({
+      success: false,
+      error: "Invalid collection",
+    });
+    expect(mocks.deleteCollection).not.toHaveBeenCalled();
+  });
+
+  it("deletes the signed-in user's collection", async () => {
+    expect(await deleteCollection("col-1")).toEqual({ success: true });
+    expect(mocks.deleteCollection).toHaveBeenCalledWith("u1", "col-1");
+  });
+
+  it("returns not found when the collection is missing or not owned", async () => {
+    mocks.deleteCollection.mockResolvedValue(false);
+
+    expect(await deleteCollection("col-other")).toEqual({
+      success: false,
+      error: "Collection not found",
+    });
+  });
+
+  it("returns a friendly error when the database fails", async () => {
+    mocks.deleteCollection.mockRejectedValue(new Error("db down"));
+
+    expect(await deleteCollection("col-1")).toEqual({
+      success: false,
+      error: "Something went wrong. Please try again.",
     });
   });
 });
