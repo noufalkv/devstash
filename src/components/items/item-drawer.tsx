@@ -28,6 +28,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import type { ItemDetail } from "@/lib/db/items";
+import { getCopyText } from "@/lib/item-copy";
 import { formatFileSize } from "@/lib/file-upload";
 import { CODE_EDITOR_TYPES, MARKDOWN_EDITOR_TYPES } from "@/lib/item-fields";
 import { ITEM_TYPE_ICONS } from "@/lib/item-type-icons";
@@ -49,10 +50,6 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
   timeZone: "UTC",
 });
-
-function getCopyText(item: ItemDetailJson): string | null {
-  return item.contentType === "URL" ? item.url : item.content;
-}
 
 function ActionButton({
   icon: Icon,

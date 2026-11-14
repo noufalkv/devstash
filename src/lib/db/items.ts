@@ -15,6 +15,9 @@ export interface ItemSummary {
   isFavorite: boolean;
   isPinned: boolean;
   createdAt: Date;
+  contentType: "TEXT" | "FILE" | "URL";
+  content: string | null;
+  url: string | null;
   fileName: string | null;
   fileSize: number | null;
   itemType: ItemSummaryType;
@@ -22,10 +25,7 @@ export interface ItemSummary {
 }
 
 export interface ItemDetail extends ItemSummary {
-  contentType: "TEXT" | "FILE" | "URL";
-  content: string | null;
   language: string | null;
-  url: string | null;
   updatedAt: Date;
   collections: { id: string; name: string }[];
 }
@@ -57,6 +57,9 @@ const itemSummarySelect = {
   isFavorite: true,
   isPinned: true,
   createdAt: true,
+  contentType: true,
+  content: true,
+  url: true,
   fileName: true,
   fileSize: true,
   itemType: { select: { id: true, name: true, icon: true, color: true } },
@@ -103,10 +106,7 @@ export function getItemsByType(
 
 const itemDetailSelect = {
   ...itemSummarySelect,
-  contentType: true,
-  content: true,
   language: true,
-  url: true,
   updatedAt: true,
   collections: {
     select: { collection: { select: { id: true, name: true } } },
