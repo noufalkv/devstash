@@ -104,6 +104,15 @@ export function getItemsByType(
   return findItemSummaries(userId, { where: { itemType: { name: typeName } } });
 }
 
+export function getItemsByCollection(
+  userId: string,
+  collectionId: string,
+): Promise<ItemSummary[]> {
+  return findItemSummaries(userId, {
+    where: { collections: { some: { collectionId } } },
+  });
+}
+
 const itemDetailSelect = {
   ...itemSummarySelect,
   language: true,

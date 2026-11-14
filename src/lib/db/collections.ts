@@ -80,6 +80,30 @@ export function getSidebarCollections(
   return findCollectionSummaries(userId);
 }
 
+export function getAllCollections(
+  userId: string,
+): Promise<CollectionSummary[]> {
+  return findCollectionSummaries(userId);
+}
+
+export interface CollectionHeader {
+  id: string;
+  name: string;
+  description: string | null;
+  isFavorite: boolean;
+}
+
+// One of the user's collections, or null when missing or owned by someone else
+export function getCollection(
+  userId: string,
+  id: string,
+): Promise<CollectionHeader | null> {
+  return prisma.collection.findFirst({
+    where: { id, userId },
+    select: { id: true, name: true, description: true, isFavorite: true },
+  });
+}
+
 export interface CollectionOption {
   id: string;
   name: string;
