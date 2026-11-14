@@ -20,6 +20,7 @@ import {
   getFileIconKind,
   type FileIconKind,
 } from "@/lib/file-upload";
+import { formatDate } from "@/lib/format-date";
 
 const FILE_ICONS: Record<FileIconKind, LucideIcon> = {
   pdf: FileText,
@@ -29,13 +30,6 @@ const FILE_ICONS: Record<FileIconKind, LucideIcon> = {
   text: FileText,
   generic: File,
 };
-
-const dateFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  year: "numeric",
-  timeZone: "UTC",
-});
 
 export function FileRow({ item }: { item: ItemSummary }) {
   const { openItem } = useItemDrawer();
@@ -74,7 +68,7 @@ export function FileRow({ item }: { item: ItemSummary }) {
             {item.fileSize === null ? "—" : formatFileSize(item.fileSize)}
           </span>
           <span className="sm:w-28 sm:text-right">
-            {dateFormatter.format(item.createdAt)}
+            {formatDate(item.createdAt, "medium")}
           </span>
         </div>
       </div>

@@ -57,6 +57,68 @@ function uploadWithProgress(
   return { promise, abort: () => xhr.abort() };
 }
 
+function UploadProgress({ percent }: { percent: number }) {
+  return (
+    <div className="flex w-full flex-col gap-2">
+      <p>Uploading... {percent}%</p>
+      <div
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={percent}
+        className="h-2 w-full overflow-hidden rounded-full bg-muted"
+      >
+        <div
+          className="h-full bg-primary transition-[width]"
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function UploadedFileCard({
+  file,
+  previewUrl,
+  disabled,
+  onRemove,
+}: {
+  file: ItemFileData;
+  previewUrl: string | null;
+  disabled?: boolean;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border p-3">
+      {previewUrl && (
+        // eslint-disable-next-line @next/next/no-img-element -- local blob preview
+        <img
+          src={previewUrl}
+          alt={file.name}
+          className="max-h-48 w-full rounded-md bg-muted object-contain"
+        />
+      )}
+      <div className="flex items-center gap-3">
+        <FileIcon className="size-5 shrink-0 text-muted-foreground" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium">{file.name}</p>
+          <p className="text-xs text-muted-foreground">{formatFileSize(file.size)}</p>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Remove file"
+          disabled={disabled}
+          onClick={onRemove}
+        >
+          <X />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function FileUpload({ type, value, onChange, disabled }: FileUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<(() => void) | null>(null);
@@ -111,33 +173,12 @@ export function FileUpload({ type, value, onChange, disabled }: FileUploadProps)
 
   if (value && !isUploading) {
     return (
-      <div className="flex flex-col gap-3 rounded-lg border p-3">
-        {previewUrl && (
-          // eslint-disable-next-line @next/next/no-img-element -- local blob preview
-          <img
-            src={previewUrl}
-            alt={value.name}
-            className="max-h-48 w-full rounded-md bg-muted object-contain"
-          />
-        )}
-        <div className="flex items-center gap-3">
-          <FileIcon className="size-5 shrink-0 text-muted-foreground" />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">{value.name}</p>
-            <p className="text-xs text-muted-foreground">{formatFileSize(value.size)}</p>
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Remove file"
-            disabled={disabled}
-            onClick={handleRemove}
-          >
-            <X />
-          </Button>
-        </div>
-      </div>
+      <UploadedFileCard
+        file={value}
+        previewUrl={previewUrl}
+        disabled={disabled}
+        onRemove={handleRemove}
+      />
     );
   }
 
@@ -173,21 +214,7 @@ export function FileUpload({ type, value, onChange, disabled }: FileUploadProps)
       >
         <UploadCloud className="size-6 text-muted-foreground" />
         {isUploading ? (
-          <div className="flex w-full flex-col gap-2">
-            <p>Uploading... {progress}%</p>
-            <div
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={progress}
-              className="h-2 w-full overflow-hidden rounded-full bg-muted"
-            >
-              <div
-                className="h-full bg-primary transition-[width]"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
+          <UploadProgress percent={progress} />
         ) : (
           <>
             <p>Drag and drop a {type}, or click to browse</p>
