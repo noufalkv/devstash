@@ -1,22 +1,28 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { create, findFirst, findMany } = vi.hoisted(() => ({
+const { create, findFirst, findMany, update, remove } = vi.hoisted(() => ({
   create: vi.fn(),
   findFirst: vi.fn(),
   findMany: vi.fn(),
+  update: vi.fn(),
+  remove: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
-  prisma: { collection: { create, findFirst, findMany } },
+  prisma: { collection: { create, findFirst, findMany, update, delete: remove } },
 }));
 
 import {
   createCollection,
+  deleteCollection,
   findOwnedCollectionIds,
   getAllCollections,
   getCollection,
   getCollectionOptions,
+  updateCollection,
 } from "@/lib/db/collections";
+
+const notFound = Object.assign(new Error("Record not found"), { code: "P2025" });
 
 describe("getAllCollections", () => {
   beforeEach(() => {
@@ -165,5 +171,67 @@ describe("createCollection", () => {
       itemCount: 0,
       itemTypes: [],
     });
+  });
+});
+
+describe("updateCollection", () => {
+  beforeEach(() => {
+    update.mockReset();
+  });
+
+  it("updates the collection scoped to its owner", async () => {
+    const updated = { id: "col-1", name: "Hooks", description: null, isFavorite: false };
+    update.mockResolvedValue(updated);
+
+    await expect(
+      updateCollection("user-1", "col-1", { name: "Hooks", description: null }),
+    ).resolves.toEqual(updated);
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "col-1", userId: "user-1" },
+        data: { name: "Hooks", description: null },
+      }),
+    );
+  });
+
+  it("returns null when the collection is missing or not owned", async () => {
+    update.mockRejectedValue(notFound);
+
+    await expect(
+      updateCollection("user-1", "col-other", { name: "Hooks", description: null }),
+    ).resolves.toBeNull();
+  });
+
+  it("rethrows other errors", async () => {
+    update.mockRejectedValue(new Error("db down"));
+
+    await expect(
+      updateCollection("user-1", "col-1", { name: "Hooks", description: null }),
+    ).rejects.toThrow("db down");
+  });
+});
+
+describe("deleteCollection", () => {
+  beforeEach(() => {
+    remove.mockReset();
+  });
+
+  it("deletes only the collection, scoped to its owner", async () => {
+    remove.mockResolvedValue({});
+
+    await expect(deleteCollection("user-1", "col-1")).resolves.toBe(true);
+    expect(remove).toHaveBeenCalledWith({ where: { id: "col-1", userId: "user-1" } });
+  });
+
+  it("returns false when the collection is missing or not owned", async () => {
+    remove.mockRejectedValue(notFound);
+
+    await expect(deleteCollection("user-1", "col-other")).resolves.toBe(false);
+  });
+
+  it("rethrows other errors", async () => {
+    remove.mockRejectedValue(new Error("db down"));
+
+    await expect(deleteCollection("user-1", "col-1")).rejects.toThrow("db down");
   });
 });

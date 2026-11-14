@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { Star } from "lucide-react";
 
 import { auth } from "@/auth";
+import { CollectionHeaderActions } from "@/components/collections/collection-actions";
 import { FileRow } from "@/components/items/file-row";
 import { ImageCard } from "@/components/items/image-card";
 import { ItemCard } from "@/components/items/item-card";
@@ -46,12 +47,15 @@ async function CollectionDetail({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <h1 className="flex items-center gap-2 text-3xl font-semibold">
-          {collection.name}
-          {collection.isFavorite && (
-            <Star className="size-5 fill-yellow-400 text-yellow-400" />
-          )}
-        </h1>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h1 className="flex min-w-0 items-center gap-2 text-3xl font-semibold">
+            <span className="truncate">{collection.name}</span>
+            {collection.isFavorite && (
+              <Star className="size-5 shrink-0 fill-yellow-400 text-yellow-400" />
+            )}
+          </h1>
+          <CollectionHeaderActions collection={collection} />
+        </div>
         {collection.description && (
           <p className="text-muted-foreground">{collection.description}</p>
         )}
