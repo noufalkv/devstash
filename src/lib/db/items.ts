@@ -144,6 +144,8 @@ export interface UpdateItemData {
   url: string | null;
   language: string | null;
   tags: string[];
+  // Must already be checked to belong to the item's owner
+  collectionIds: string[];
 }
 
 export interface ItemFileData {
@@ -162,7 +164,7 @@ export async function createItem(
   userId: string,
   data: CreateItemData,
 ): Promise<ItemDetail | null> {
-  const { type, tags, file, ...fields } = data;
+  const { type, tags, file, collectionIds, ...fields } = data;
 
   const itemType = await prisma.itemType.findFirst({
     where: { name: type, isSystem: true, userId: null },
@@ -185,6 +187,9 @@ export async function createItem(
           create: { name },
         })),
       },
+      collections: {
+        create: collectionIds.map((collectionId) => ({ collectionId })),
+      },
     },
     select: itemDetailSelect,
   });
@@ -197,7 +202,7 @@ export async function updateItem(
   userId: string,
   data: UpdateItemData,
 ): Promise<ItemDetail | null> {
-  const { tags, ...fields } = data;
+  const { tags, collectionIds, ...fields } = data;
 
   try {
     const item = await prisma.item.update({
@@ -210,6 +215,14 @@ export async function updateItem(
             where: { name },
             create: { name },
           })),
+        },
+        // Replace memberships: drop the ones not selected, add the new ones
+        collections: {
+          deleteMany: { collectionId: { notIn: collectionIds } },
+          createMany: {
+            data: collectionIds.map((collectionId) => ({ collectionId })),
+            skipDuplicates: true,
+          },
         },
       },
       select: itemDetailSelect,

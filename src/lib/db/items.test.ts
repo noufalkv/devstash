@@ -130,6 +130,7 @@ describe("updateItem", () => {
     url: null,
     language: "typescript",
     tags: ["auth", "react"],
+    collectionIds: ["col-1", "col-2"],
   };
 
   beforeEach(() => {
@@ -150,6 +151,31 @@ describe("updateItem", () => {
         { where: { name: "auth" }, create: { name: "auth" } },
         { where: { name: "react" }, create: { name: "react" } },
       ],
+    });
+  });
+
+  it("replaces collection memberships with the selected ones", async () => {
+    update.mockResolvedValue(row);
+
+    await updateItem("item-1", "user-1", data);
+
+    expect(update.mock.calls[0][0].data.collections).toEqual({
+      deleteMany: { collectionId: { notIn: ["col-1", "col-2"] } },
+      createMany: {
+        data: [{ collectionId: "col-1" }, { collectionId: "col-2" }],
+        skipDuplicates: true,
+      },
+    });
+  });
+
+  it("removes every membership when no collections are selected", async () => {
+    update.mockResolvedValue(row);
+
+    await updateItem("item-1", "user-1", { ...data, collectionIds: [] });
+
+    expect(update.mock.calls[0][0].data.collections).toEqual({
+      deleteMany: { collectionId: { notIn: [] } },
+      createMany: { data: [], skipDuplicates: true },
     });
   });
 
@@ -214,6 +240,7 @@ describe("createItem", () => {
     url: null,
     language: "typescript",
     tags: ["auth", "react"],
+    collectionIds: [],
   };
 
   beforeEach(() => {
@@ -245,6 +272,16 @@ describe("createItem", () => {
         { where: { name: "react" }, create: { name: "react" } },
       ],
     });
+  });
+
+  it("adds the new item to the selected collections", async () => {
+    await createItem("user-1", { ...data, collectionIds: ["col-1", "col-2"] });
+
+    const args = create.mock.calls[0][0];
+    expect(args.data.collections).toEqual({
+      create: [{ collectionId: "col-1" }, { collectionId: "col-2" }],
+    });
+    expect(args.data).not.toHaveProperty("collectionIds");
   });
 
   it("creates links with the URL content type", async () => {
@@ -291,6 +328,7 @@ describe("createItem with a file", () => {
       url: null,
       language: null,
       tags: [],
+      collectionIds: [],
       file: { key: "user-1/abc-spec.pdf", name: "spec.pdf", size: 1024 },
     });
 

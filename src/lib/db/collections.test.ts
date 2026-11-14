@@ -1,12 +1,60 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { create } = vi.hoisted(() => ({ create: vi.fn() }));
-
-vi.mock("@/lib/prisma", () => ({
-  prisma: { collection: { create } },
+const { create, findMany } = vi.hoisted(() => ({
+  create: vi.fn(),
+  findMany: vi.fn(),
 }));
 
-import { createCollection } from "@/lib/db/collections";
+vi.mock("@/lib/prisma", () => ({
+  prisma: { collection: { create, findMany } },
+}));
+
+import {
+  createCollection,
+  findOwnedCollectionIds,
+  getCollectionOptions,
+} from "@/lib/db/collections";
+
+describe("getCollectionOptions", () => {
+  beforeEach(() => {
+    findMany.mockReset();
+  });
+
+  it("lists the user's collections by name", async () => {
+    const options = [{ id: "col-1", name: "React Patterns" }];
+    findMany.mockResolvedValue(options);
+
+    await expect(getCollectionOptions("user-1")).resolves.toEqual(options);
+    expect(findMany).toHaveBeenCalledWith({
+      where: { userId: "user-1" },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    });
+  });
+});
+
+describe("findOwnedCollectionIds", () => {
+  beforeEach(() => {
+    findMany.mockReset();
+  });
+
+  it("returns only the ids owned by the user", async () => {
+    findMany.mockResolvedValue([{ id: "col-1" }]);
+
+    await expect(
+      findOwnedCollectionIds("user-1", ["col-1", "col-other"]),
+    ).resolves.toEqual(["col-1"]);
+    expect(findMany).toHaveBeenCalledWith({
+      where: { userId: "user-1", id: { in: ["col-1", "col-other"] } },
+      select: { id: true },
+    });
+  });
+
+  it("skips the query for an empty list", async () => {
+    await expect(findOwnedCollectionIds("user-1", [])).resolves.toEqual([]);
+    expect(findMany).not.toHaveBeenCalled();
+  });
+});
 
 describe("createCollection", () => {
   beforeEach(() => {

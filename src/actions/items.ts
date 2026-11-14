@@ -10,6 +10,7 @@ import {
 } from "@/lib/item-fields";
 import { isFileItemType, validateFile } from "@/lib/file-upload";
 import { deleteFromR2, isOwnedKey } from "@/lib/r2";
+import { findOwnedCollectionIds } from "@/lib/db/collections";
 import {
   createItem as createItemQuery,
   deleteItem as deleteItemQuery,
@@ -47,6 +48,10 @@ const updateItemSchema = z.object({
     .transform((tags) => [
       ...new Set(tags.map((tag) => tag.trim()).filter(Boolean)),
     ]),
+  collectionIds: z
+    .array(z.string().min(1))
+    .default([])
+    .transform((ids) => [...new Set(ids)]),
 });
 
 const uploadedFileSchema = z.object({
@@ -101,7 +106,14 @@ export async function createItem(
   }
 
   try {
-    const item = await createItemQuery(session.user.id, parsed.data);
+    const collectionIds = await findOwnedCollectionIds(
+      session.user.id,
+      parsed.data.collectionIds,
+    );
+    const item = await createItemQuery(session.user.id, {
+      ...parsed.data,
+      collectionIds,
+    });
     if (!item) return { success: false, error: "Unknown item type" };
     return { success: true, data: item };
   } catch {
@@ -120,7 +132,15 @@ export async function updateItem(
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message };
 
   try {
-    const item = await updateItemQuery(itemId, session.user.id, parsed.data);
+    // Ids of collections the user does not own are dropped
+    const collectionIds = await findOwnedCollectionIds(
+      session.user.id,
+      parsed.data.collectionIds,
+    );
+    const item = await updateItemQuery(itemId, session.user.id, {
+      ...parsed.data,
+      collectionIds,
+    });
     if (!item) return { success: false, error: "Item not found" };
     return { success: true, data: item };
   } catch {
