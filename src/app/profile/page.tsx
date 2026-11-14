@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { FolderOpen, LayoutGrid } from "lucide-react";
 
 import { auth } from "@/auth";
-import { AccountActions } from "@/components/profile/account-actions";
 import { ProfileInfo } from "@/components/profile/profile-info";
 import { TypeBreakdown } from "@/components/profile/type-breakdown";
 import { StatCard } from "@/components/dashboard/stat-card";
@@ -32,8 +31,6 @@ export default async function ProfilePage() {
         </div>
         <TypeBreakdown itemTypes={itemTypes} />
       </section>
-
-      <AccountActions email={profile.email} hasPassword={profile.hasPassword} />
     </>
   );
 }
