@@ -1,39 +1,26 @@
 "use client";
 
-import Editor, { type BeforeMount, type OnMount } from "@monaco-editor/react";
+import Editor, { type OnMount } from "@monaco-editor/react";
 import { Check, Copy } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { useEditorPreferences } from "@/components/settings/editor-preferences-provider";
 import { resolveCodeLanguage } from "@/lib/code-language";
+import { defineEditorThemes, EDITOR_THEME_DEFINITIONS } from "@/lib/editor-themes";
 import { cn } from "@/lib/utils";
+
+type MonacoEditor = Parameters<OnMount>[0];
 
 const MAX_HEIGHT = 400;
 const MIN_HEIGHT = 80;
-const LINE_HEIGHT = 19;
 const VERTICAL_PADDING = 16;
-const THEME_NAME = "devstash-dark";
+// Keeps the 12px / 19px ratio the editor had before font size became a preference.
+const LINE_HEIGHT_RATIO = 1.6;
 
-const defineTheme: BeforeMount = (monaco) => {
-  monaco.editor.defineTheme(THEME_NAME, {
-    base: "vs-dark",
-    inherit: true,
-    rules: [],
-    colors: {
-      "editor.background": "#1a1a1d",
-      "editor.lineHighlightBackground": "#ffffff0a",
-      "editorLineNumber.foreground": "#52525b",
-      "editorGutter.background": "#1a1a1d",
-      "scrollbarSlider.background": "#52525b66",
-      "scrollbarSlider.hoverBackground": "#71717a99",
-      "scrollbarSlider.activeBackground": "#a1a1aaaa",
-    },
-  });
-};
-
-function estimateHeight(value: string): number {
+function estimateHeight(value: string, lineHeight: number): number {
   const lines = value.split("\n").length;
-  return Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, lines * LINE_HEIGHT + VERTICAL_PADDING));
+  return Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, lines * lineHeight + VERTICAL_PADDING));
 }
 
 export function CodeEditor({
@@ -51,13 +38,24 @@ export function CodeEditor({
 }) {
   const [copied, setCopied] = useState(false);
   const [contentHeight, setContentHeight] = useState<number | null>(null);
+  const editorRef = useRef<MonacoEditor | null>(null);
+  const { preferences } = useEditorPreferences();
+  const theme = EDITOR_THEME_DEFINITIONS[preferences.theme];
+  const lineHeight = Math.round(preferences.fontSize * LINE_HEIGHT_RATIO);
   const monacoLanguage = resolveCodeLanguage(language);
   const height = Math.min(
     MAX_HEIGHT,
-    Math.max(MIN_HEIGHT, contentHeight ?? estimateHeight(value)),
+    Math.max(MIN_HEIGHT, contentHeight ?? estimateHeight(value, lineHeight)),
   );
 
+  // Tab size is a model option, so `options` alone does not update it after mount.
+  useEffect(() => {
+    editorRef.current?.getModel()?.updateOptions({ tabSize: preferences.tabSize });
+  }, [preferences.tabSize]);
+
   const handleMount: OnMount = (editor) => {
+    editorRef.current = editor;
+    editor.getModel()?.updateOptions({ tabSize: preferences.tabSize });
     const update = () =>
       setContentHeight(editor.getContentHeight());
     update();
@@ -77,11 +75,17 @@ export function CodeEditor({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-lg border border-border bg-[#1a1a1d]",
+        "overflow-hidden rounded-lg border border-border bg-(--editor-bg)",
         className,
       )}
+      style={
+        {
+          "--editor-bg": theme.background,
+          "--editor-header-bg": theme.headerBackground,
+        } as React.CSSProperties
+      }
     >
-      <div className="flex items-center justify-between border-b border-border bg-[#232326] px-3 py-2">
+      <div className="flex items-center justify-between border-b border-border bg-(--editor-header-bg) px-3 py-2">
         <div className="flex items-center gap-1.5" aria-hidden>
           <span className="size-3 rounded-full bg-[#ff5f57]" />
           <span className="size-3 rounded-full bg-[#febc2e]" />
@@ -103,17 +107,20 @@ export function CodeEditor({
         height={height}
         language={monacoLanguage}
         value={value}
-        theme={THEME_NAME}
-        beforeMount={defineTheme}
+        theme={theme.monacoName}
+        beforeMount={defineEditorThemes}
         onMount={handleMount}
         onChange={(next) => onChange?.(next ?? "")}
         loading={<div className="h-full w-full animate-pulse bg-muted" />}
         options={{
           readOnly,
           domReadOnly: readOnly,
-          minimap: { enabled: false },
-          fontSize: 12,
-          lineHeight: LINE_HEIGHT,
+          minimap: { enabled: preferences.minimap },
+          fontSize: preferences.fontSize,
+          lineHeight,
+          wordWrap: preferences.wordWrap ? "on" : "off",
+          tabSize: preferences.tabSize,
+          detectIndentation: false,
           scrollBeyondLastLine: false,
           padding: { top: 8, bottom: 8 },
           renderLineHighlight: readOnly ? "none" : "line",

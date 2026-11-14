@@ -10,9 +10,13 @@ import { SidebarSkeleton } from "@/components/layout/sidebar-skeleton";
 import { TopBar } from "@/components/layout/top-bar";
 import { CommandPalette } from "@/components/search/command-palette";
 import { CommandPaletteProvider } from "@/components/search/command-palette-provider";
+import {
+  EditorPreferencesHydrator,
+  EditorPreferencesProvider,
+} from "@/components/settings/editor-preferences-provider";
 import { getSidebarCollections } from "@/lib/db/collections";
 import { getSearchItems, getUserItemTypeCounts } from "@/lib/db/items";
-import { getSidebarUser } from "@/lib/db/users";
+import { getEditorPreferences, getSidebarUser } from "@/lib/db/users";
 
 async function requireUserId(): Promise<string> {
   await connection();
@@ -55,24 +59,35 @@ async function SearchPalette() {
   );
 }
 
+async function EditorPreferencesLoader() {
+  const userId = await requireUserId();
+  const preferences = await getEditorPreferences(userId);
+  return <EditorPreferencesHydrator preferences={preferences} />;
+}
+
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
       <CommandPaletteProvider>
-        <ItemDrawerProvider>
-          <div className="flex min-h-full flex-1 flex-col">
-            <TopBar />
-            <div className="flex flex-1">
-              <Suspense fallback={<SidebarSkeleton />}>
-                <DashboardSidebar />
-              </Suspense>
-              <main className="flex-1 p-6">{children}</main>
+        <EditorPreferencesProvider>
+          <ItemDrawerProvider>
+            <div className="flex min-h-full flex-1 flex-col">
+              <TopBar />
+              <div className="flex flex-1">
+                <Suspense fallback={<SidebarSkeleton />}>
+                  <DashboardSidebar />
+                </Suspense>
+                <main className="flex-1 p-6">{children}</main>
+              </div>
             </div>
-          </div>
-          <Suspense fallback={null}>
-            <SearchPalette />
-          </Suspense>
-        </ItemDrawerProvider>
+            <Suspense fallback={null}>
+              <SearchPalette />
+            </Suspense>
+            <Suspense fallback={null}>
+              <EditorPreferencesLoader />
+            </Suspense>
+          </ItemDrawerProvider>
+        </EditorPreferencesProvider>
       </CommandPaletteProvider>
     </SidebarProvider>
   );
