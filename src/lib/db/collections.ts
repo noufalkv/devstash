@@ -80,6 +80,23 @@ export function getSidebarCollections(
   return findCollectionSummaries(userId);
 }
 
+export interface CreateCollectionData {
+  name: string;
+  description: string | null;
+}
+
+export async function createCollection(
+  userId: string,
+  data: CreateCollectionData,
+): Promise<CollectionSummary> {
+  const collection = await prisma.collection.create({
+    data: { userId, name: data.name, description: data.description },
+    select: { id: true, name: true, description: true, isFavorite: true },
+  });
+
+  return { ...collection, itemCount: 0, itemTypes: [] };
+}
+
 export async function getCollectionStats(
   userId: string,
 ): Promise<CollectionStats> {

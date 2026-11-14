@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Layers, PanelLeft, Search } from "lucide-react";
 
+import { NewCollectionDialog } from "@/components/collections/new-collection-dialog";
 import { NewItemDialog } from "@/components/items/new-item-dialog";
 import { useSidebar } from "@/components/layout/sidebar-provider";
 import { Button } from "@/components/ui/button";
@@ -37,7 +38,10 @@ export function TopBar() {
         />
       </div>
 
-      <NewItemDialog />
+      <div className="flex shrink-0 items-center gap-2">
+        <NewCollectionDialog />
+        <NewItemDialog />
+      </div>
     </header>
   );
 }
