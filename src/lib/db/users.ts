@@ -1,3 +1,5 @@
+import { isRecordNotFound } from "@/lib/db/errors";
+import { parseEditorPreferences, type EditorPreferences } from "@/lib/editor-preferences";
 import { prisma } from "@/lib/prisma";
 
 export interface SidebarUser {
@@ -41,4 +43,30 @@ export async function getProfile(userId: string): Promise<Profile | null> {
     itemCount: _count.items,
     collectionCount: _count.collections,
   };
+}
+
+export async function getEditorPreferences(userId: string): Promise<EditorPreferences> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { editorPreferences: true },
+  });
+  return parseEditorPreferences(user?.editorPreferences);
+}
+
+// Returns null when the user no longer exists.
+export async function updateEditorPreferences(
+  userId: string,
+  preferences: EditorPreferences,
+): Promise<EditorPreferences | null> {
+  try {
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { editorPreferences: { ...preferences } },
+      select: { editorPreferences: true },
+    });
+    return parseEditorPreferences(user.editorPreferences);
+  } catch (error) {
+    if (isRecordNotFound(error)) return null;
+    throw error;
+  }
 }

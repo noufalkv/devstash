@@ -22,7 +22,8 @@ model User {
   isPro                Boolean   @default(false)
   stripeCustomerId     String?   @unique
   stripeSubscriptionId String?   @unique
-  createdAt            DateTime  @default(now())
+  editorPreferences    Json?
+  createdAt           DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 
   // Relations
