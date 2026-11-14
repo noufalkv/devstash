@@ -3,6 +3,7 @@ import { ITEM_TYPE_ICONS } from "@/lib/item-type-icons";
 import { cn } from "@/lib/utils";
 
 const SIZES = {
+  xs: { box: "size-7", icon: "size-3.5" },
   sm: { box: "size-9", icon: "size-4" },
   lg: { box: "size-10", icon: "size-5" },
 } as const;
