@@ -8,15 +8,22 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { SidebarProvider } from "@/components/layout/sidebar-provider";
 import { SidebarSkeleton } from "@/components/layout/sidebar-skeleton";
 import { TopBar } from "@/components/layout/top-bar";
-import { getSidebarCollections } from "@/lib/db/collections";
-import { getUserItemTypeCounts } from "@/lib/db/items";
+import { CommandPalette } from "@/components/search/command-palette";
+import { CommandPaletteProvider } from "@/components/search/command-palette-provider";
+import { getAllCollections, getSidebarCollections } from "@/lib/db/collections";
+import { getSearchItems, getUserItemTypeCounts } from "@/lib/db/items";
 import { getSidebarUser } from "@/lib/db/users";
 
-async function DashboardSidebar() {
+async function requireUserId(): Promise<string> {
   await connection();
   const session = await auth();
   const userId = session?.user?.id;
   if (!userId) redirect("/sign-in");
+  return userId;
+}
+
+async function DashboardSidebar() {
+  const userId = await requireUserId();
 
   const [itemTypes, collections, user] = await Promise.all([
     getUserItemTypeCounts(userId),
@@ -27,20 +34,46 @@ async function DashboardSidebar() {
   return <Sidebar itemTypes={itemTypes} collections={collections} user={user} />;
 }
 
+// Loads the palette's search data once per request, so search itself needs no server calls.
+async function SearchPalette() {
+  const userId = await requireUserId();
+
+  const [items, collections] = await Promise.all([
+    getSearchItems(userId),
+    getAllCollections(userId),
+  ]);
+
+  return (
+    <CommandPalette
+      items={items}
+      collections={collections.map(({ id, name, itemCount }) => ({
+        id,
+        name,
+        itemCount,
+      }))}
+    />
+  );
+}
+
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
-      <div className="flex min-h-full flex-1 flex-col">
-        <TopBar />
-        <div className="flex flex-1">
-          <Suspense fallback={<SidebarSkeleton />}>
-            <DashboardSidebar />
+      <CommandPaletteProvider>
+        <ItemDrawerProvider>
+          <div className="flex min-h-full flex-1 flex-col">
+            <TopBar />
+            <div className="flex flex-1">
+              <Suspense fallback={<SidebarSkeleton />}>
+                <DashboardSidebar />
+              </Suspense>
+              <main className="flex-1 p-6">{children}</main>
+            </div>
+          </div>
+          <Suspense fallback={null}>
+            <SearchPalette />
           </Suspense>
-          <main className="flex-1 p-6">
-            <ItemDrawerProvider>{children}</ItemDrawerProvider>
-          </main>
-        </div>
-      </div>
+        </ItemDrawerProvider>
+      </CommandPaletteProvider>
     </SidebarProvider>
   );
 }

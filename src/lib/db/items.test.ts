@@ -27,6 +27,8 @@ import {
   getItemsByType,
   deleteItem,
   getPinnedItems,
+  getSearchItems,
+  SEARCH_PREVIEW_LENGTH,
   updateItem,
 } from "@/lib/db/items";
 
@@ -376,5 +378,74 @@ describe("getItemFile", () => {
 
     findFirst.mockResolvedValueOnce(null);
     expect(await getItemFile("item-2", "user-1")).toBeNull();
+  });
+});
+
+describe("getSearchItems", () => {
+  const itemType = row.itemType;
+  const searchRow = {
+    id: "item-1",
+    title: "useAuth Hook",
+    content: null,
+    url: null,
+    fileName: null,
+    itemType,
+  };
+
+  beforeEach(() => {
+    findMany.mockReset();
+  });
+
+  it("scopes the query to the user", async () => {
+    findMany.mockResolvedValue([]);
+
+    await getSearchItems("user-1");
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { userId: "user-1" } }),
+    );
+  });
+
+  it("collapses whitespace in the content preview", async () => {
+    findMany.mockResolvedValue([
+      { ...searchRow, content: "const a = 1;\n\n  const b = 2;" },
+    ]);
+
+    const [item] = await getSearchItems("user-1");
+
+    expect(item).toEqual({
+      id: "item-1",
+      title: "useAuth Hook",
+      itemType,
+      preview: "const a = 1; const b = 2;",
+    });
+  });
+
+  it("truncates long content", async () => {
+    findMany.mockResolvedValue([{ ...searchRow, content: "x".repeat(200) }]);
+
+    const [item] = await getSearchItems("user-1");
+
+    expect(item.preview).toBe(`${"x".repeat(SEARCH_PREVIEW_LENGTH)}…`);
+  });
+
+  it("uses the URL for links and the file name for files", async () => {
+    findMany.mockResolvedValue([
+      { ...searchRow, url: "https://react.dev" },
+      { ...searchRow, fileName: "notes.pdf" },
+    ]);
+
+    const [link, file] = await getSearchItems("user-1");
+
+    expect(link.preview).toBe("https://react.dev");
+    expect(file.preview).toBe("notes.pdf");
+  });
+
+  it("returns a null preview for blank content", async () => {
+    findMany.mockResolvedValue([{ ...searchRow, content: "   \n " }]);
+
+    const [item] = await getSearchItems("user-1");
+
+    expect(item.preview).toBeNull();
   });
 });

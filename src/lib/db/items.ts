@@ -114,6 +114,45 @@ export function getItemsByCollection(
   });
 }
 
+export interface SearchItem {
+  id: string;
+  title: string;
+  itemType: ItemSummaryType;
+  preview: string | null;
+}
+
+export const SEARCH_PREVIEW_LENGTH = 80;
+
+/** One line of the item's content, URL or file name, for search results. */
+function toSearchPreview(text: string | null): string | null {
+  const line = text?.replace(/\s+/g, " ").trim();
+  if (!line) return null;
+  return line.length > SEARCH_PREVIEW_LENGTH
+    ? `${line.slice(0, SEARCH_PREVIEW_LENGTH)}…`
+    : line;
+}
+
+/** Every item the user owns, trimmed to what the command palette searches. */
+export async function getSearchItems(userId: string): Promise<SearchItem[]> {
+  const items = await prisma.item.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      title: true,
+      content: true,
+      url: true,
+      fileName: true,
+      itemType: { select: { id: true, name: true, icon: true, color: true } },
+    },
+  });
+
+  return items.map(({ content, url, fileName, ...item }) => ({
+    ...item,
+    preview: toSearchPreview(url ?? fileName ?? content),
+  }));
+}
+
 const itemDetailSelect = {
   ...itemSummarySelect,
   language: true,
