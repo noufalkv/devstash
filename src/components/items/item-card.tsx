@@ -4,8 +4,10 @@ import { Pin, Star } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { useItemDrawer } from "@/components/items/item-drawer-provider";
+import { QuickCopyButton } from "@/components/items/quick-copy-button";
 import { Card } from "@/components/ui/card";
 import type { ItemSummary } from "@/lib/db/items";
+import { getCopyText } from "@/lib/item-copy";
 import { ITEM_TYPE_ICONS } from "@/lib/item-type-icons";
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
@@ -18,6 +20,7 @@ export function ItemCard({ item }: { item: ItemSummary }) {
   const { openItem } = useItemDrawer();
   const { color } = item.itemType;
   const Icon = ITEM_TYPE_ICONS[item.itemType.icon];
+  const copyText = getCopyText(item);
 
   return (
     <Card
@@ -31,7 +34,7 @@ export function ItemCard({ item }: { item: ItemSummary }) {
           openItem(item.id);
         }
       }}
-      className="h-full cursor-pointer flex-row items-start gap-3 border-l-4 border-l-border px-3 transition-colors hover:bg-muted/40"
+      className="group/item h-full cursor-pointer flex-row items-start gap-3 border-l-4 border-l-border px-3 transition-colors hover:bg-muted/40"
       style={{ borderLeftColor: color }}
     >
       <div
@@ -73,9 +76,12 @@ export function ItemCard({ item }: { item: ItemSummary }) {
           </div>
         )}
       </div>
-      <span className="shrink-0 text-xs text-muted-foreground">
-        {dateFormatter.format(item.createdAt)}
-      </span>
+      <div className="flex shrink-0 items-center gap-1">
+        {copyText && <QuickCopyButton text={copyText} title={item.title} />}
+        <span className="text-xs text-muted-foreground">
+          {dateFormatter.format(item.createdAt)}
+        </span>
+      </div>
     </Card>
   );
 }
