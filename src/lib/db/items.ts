@@ -139,6 +139,28 @@ export function getItemsByCollection(
   );
 }
 
+export interface FavoriteItem {
+  id: string;
+  title: string;
+  updatedAt: Date;
+  itemType: ItemSummaryType;
+}
+
+// Every favorite item the user owns, most recently updated first (no favoritedAt
+// column, so updatedAt stands in for when it was favorited)
+export function getFavoriteItems(userId: string): Promise<FavoriteItem[]> {
+  return prisma.item.findMany({
+    where: { userId, isFavorite: true },
+    orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+    select: {
+      id: true,
+      title: true,
+      updatedAt: true,
+      itemType: { select: { id: true, name: true, icon: true, color: true } },
+    },
+  });
+}
+
 export interface SearchItem {
   id: string;
   title: string;

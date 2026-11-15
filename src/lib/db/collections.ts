@@ -46,34 +46,72 @@ async function findCollectionSummaries(
       name: true,
       description: true,
       isFavorite: true,
-      items: {
-        select: {
-          item: {
-            select: {
-              itemType: {
-                select: { id: true, name: true, icon: true, color: true },
-              },
-            },
-          },
-        },
-      },
+      items: collectionItemTypesSelect,
     },
   });
 
-  return collections.map(({ items, ...collection }) => {
-    const typeCounts = new Map<string, CollectionItemType>();
-    for (const { item } of items) {
-      const existing = typeCounts.get(item.itemType.id);
-      if (existing) existing.count++;
-      else typeCounts.set(item.itemType.id, { ...item.itemType, count: 1 });
-    }
+  return collections.map(({ items, ...collection }) => ({
+    ...collection,
+    itemCount: items.length,
+    itemTypes: countItemTypes(items),
+  }));
+}
 
-    return {
-      ...collection,
-      itemCount: items.length,
-      itemTypes: [...typeCounts.values()].sort((a, b) => b.count - a.count),
-    };
+const collectionItemTypesSelect = {
+  select: {
+    item: {
+      select: {
+        itemType: { select: { id: true, name: true, icon: true, color: true } },
+      },
+    },
+  },
+} as const;
+
+type CollectionItemRow = {
+  item: { itemType: Omit<CollectionItemType, "count"> };
+};
+
+// Item counts per type, most-used first
+function countItemTypes(items: CollectionItemRow[]): CollectionItemType[] {
+  const typeCounts = new Map<string, CollectionItemType>();
+  for (const { item } of items) {
+    const existing = typeCounts.get(item.itemType.id);
+    if (existing) existing.count++;
+    else typeCounts.set(item.itemType.id, { ...item.itemType, count: 1 });
+  }
+  return [...typeCounts.values()].sort((a, b) => b.count - a.count);
+}
+
+export interface FavoriteCollection {
+  id: string;
+  name: string;
+  updatedAt: Date;
+  itemCount: number;
+  // The most-used item type, for the row icon; null for an empty collection
+  topItemType: CollectionItemType | null;
+}
+
+// Every favorite collection the user owns, most recently updated first (no
+// favoritedAt column, so updatedAt stands in for when it was favorited)
+export async function getFavoriteCollections(
+  userId: string,
+): Promise<FavoriteCollection[]> {
+  const collections = await prisma.collection.findMany({
+    where: { userId, isFavorite: true },
+    orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+    select: {
+      id: true,
+      name: true,
+      updatedAt: true,
+      items: collectionItemTypesSelect,
+    },
   });
+
+  return collections.map(({ items, ...collection }) => ({
+    ...collection,
+    itemCount: items.length,
+    topItemType: countItemTypes(items)[0] ?? null,
+  }));
 }
 
 export function getRecentCollections(
