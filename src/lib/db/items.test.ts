@@ -22,6 +22,7 @@ import {
   createItem,
   getItemDetail,
   getItemFile,
+  getFavoriteItems,
   getItemStats,
   getItemsByCollection,
   getItemsByType,
@@ -501,5 +502,40 @@ describe("getSearchItems", () => {
     const [item] = await getSearchItems("user-1");
 
     expect(item.preview).toBeNull();
+  });
+});
+
+describe("getFavoriteItems", () => {
+  beforeEach(() => {
+    findMany.mockReset();
+  });
+
+  it("loads the user's favorite items, most recently updated first", async () => {
+    findMany.mockResolvedValue([]);
+
+    await getFavoriteItems("user-1");
+
+    const args = findMany.mock.calls[0][0];
+    expect(args.where).toEqual({ userId: "user-1", isFavorite: true });
+    expect(args.orderBy).toEqual([{ updatedAt: "desc" }, { id: "desc" }]);
+    expect(args.take).toBeUndefined();
+  });
+
+  it("selects only the fields the favorites list shows", async () => {
+    const favorite = {
+      id: "item-1",
+      title: "useAuth hook",
+      updatedAt: new Date("2026-11-01T00:00:00Z"),
+      itemType: { id: "t-1", name: "snippet", icon: "Code", color: "#3b82f6" },
+    };
+    findMany.mockResolvedValue([favorite]);
+
+    await expect(getFavoriteItems("user-1")).resolves.toEqual([favorite]);
+    expect(Object.keys(findMany.mock.calls[0][0].select).sort()).toEqual([
+      "id",
+      "itemType",
+      "title",
+      "updatedAt",
+    ]);
   });
 });

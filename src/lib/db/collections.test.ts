@@ -22,6 +22,7 @@ import {
   getCollection,
   getCollectionOptions,
   getCollectionsPage,
+  getFavoriteCollections,
   getRecentCollections,
   getSidebarCollections,
   updateCollection,
@@ -291,5 +292,52 @@ describe("deleteCollection", () => {
     remove.mockRejectedValue(new Error("db down"));
 
     await expect(deleteCollection("user-1", "col-1")).rejects.toThrow("db down");
+  });
+});
+
+describe("getFavoriteCollections", () => {
+  beforeEach(() => {
+    findMany.mockReset();
+  });
+
+  it("loads the user's favorite collections, most recently updated first", async () => {
+    findMany.mockResolvedValue([]);
+
+    await getFavoriteCollections("user-1");
+
+    const args = findMany.mock.calls[0][0];
+    expect(args.where).toEqual({ userId: "user-1", isFavorite: true });
+    expect(args.orderBy).toEqual([{ updatedAt: "desc" }, { id: "desc" }]);
+    expect(args.take).toBeUndefined();
+  });
+
+  it("returns the item count and the most-used item type", async () => {
+    const updatedAt = new Date("2026-11-01T00:00:00Z");
+    const snippet = { id: "t-1", name: "snippet", icon: "Code", color: "#3b82f6" };
+    const link = { id: "t-2", name: "link", icon: "Link", color: "#10b981" };
+    findMany.mockResolvedValue([
+      {
+        id: "col-1",
+        name: "React",
+        updatedAt,
+        items: [
+          { item: { itemType: link } },
+          { item: { itemType: snippet } },
+          { item: { itemType: snippet } },
+        ],
+      },
+      { id: "col-2", name: "Empty", updatedAt, items: [] },
+    ]);
+
+    await expect(getFavoriteCollections("user-1")).resolves.toEqual([
+      {
+        id: "col-1",
+        name: "React",
+        updatedAt,
+        itemCount: 3,
+        topItemType: { ...snippet, count: 2 },
+      },
+      { id: "col-2", name: "Empty", updatedAt, itemCount: 0, topItemType: null },
+    ]);
   });
 });
