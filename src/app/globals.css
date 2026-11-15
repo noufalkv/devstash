@@ -48,6 +48,70 @@
     --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* System item type colors (match the item_types seed) and editor frame colors */
+@theme {
+    --color-type-snippet: #3b82f6;
+    --color-type-prompt: #8b5cf6;
+    --color-type-command: #f97316;
+    --color-type-note: #fde047;
+    --color-type-file: #6b7280;
+    --color-type-image: #ec4899;
+    --color-type-link: #10b981;
+    --color-editor: #1a1a1d;
+    --color-editor-header: #232326;
+
+    --animate-arrow-pulse: arrow-pulse 2s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
+
+    @keyframes arrow-pulse {
+        0%, 100% {
+            scale: 1;
+            box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-type-prompt) 55%, transparent);
+        }
+        50% {
+            scale: 1.08;
+            box-shadow: 0 0 0 14px transparent;
+        }
+    }
+}
+
+/* Smooth in-page scrolling on the homepage only, offset for its fixed nav */
+html:has([data-homepage]) {
+  scroll-padding-top: 5rem;
+}
+@media (prefers-reduced-motion: no-preference) {
+  html:has([data-homepage]) {
+    scroll-behavior: smooth;
+  }
+}
+
+/*
+ * Homepage reveal animations. JavaScript marks off-screen content "pending"
+ * and later reveals it. The hiding rules live here, next to their keyframes,
+ * so content is never hidden without the animation that shows it again, and
+ * the server HTML (no attribute) is always visible.
+ */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes tag-pop {
+  from { opacity: 0; transform: translateY(6px) scale(0.95); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  [data-reveal="pending"],
+  [data-reveal-item="pending"],
+  [data-chaos]:not([data-ready]) [data-chaos-icon] {
+    opacity: 0;
+  }
+  [data-reveal="visible"] {
+    animation: fade-up 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  [data-reveal-item="visible"] {
+    animation: tag-pop 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+}
+
 :root {
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);
