@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { FolderOpen, Heart, LayoutGrid, Pin, Star } from "lucide-react";
 
 import { auth } from "@/auth";
@@ -13,6 +14,8 @@ import {
 } from "@/lib/pagination";
 
 export default async function DashboardPage() {
+  // auth() reads the clock and crypto, which is not allowed while prerendering.
+  await connection();
   const session = await auth();
   if (!session?.user?.id) redirect("/sign-in?callbackUrl=/dashboard");
   const userId = session.user.id;

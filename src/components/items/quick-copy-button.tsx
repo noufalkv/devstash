@@ -5,13 +5,15 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface QuickCopyButtonProps {
   text: string;
   title: string;
+  className?: string;
 }
 
-export function QuickCopyButton({ text, title }: QuickCopyButtonProps) {
+export function QuickCopyButton({ text, title, className }: QuickCopyButtonProps) {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -42,7 +44,10 @@ export function QuickCopyButton({ text, title }: QuickCopyButtonProps) {
         void handleCopy();
       }}
       onKeyDown={(event) => event.stopPropagation()}
-      className="-my-1 shrink-0 text-muted-foreground transition-opacity hover:text-foreground pointer-fine:opacity-0 pointer-fine:group-hover/item:opacity-100 pointer-fine:group-focus-within/item:opacity-100"
+      className={cn(
+        "-my-1 shrink-0 text-muted-foreground transition-opacity hover:text-foreground pointer-fine:opacity-0 pointer-fine:group-hover/item:opacity-100 pointer-fine:group-focus-within/item:opacity-100",
+        className,
+      )}
     >
       {copied ? <Check className="text-emerald-500" /> : <Copy />}
     </Button>
