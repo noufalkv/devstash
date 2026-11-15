@@ -6,11 +6,13 @@ import {
   createCollection as createCollectionQuery,
   deleteCollection as deleteCollectionQuery,
   getCollectionOptions,
+  setCollectionFavorite as setCollectionFavoriteQuery,
   updateCollection as updateCollectionQuery,
   type CollectionHeader,
   type CollectionOption,
   type CollectionSummary,
 } from "@/lib/db/collections";
+import type { FavoriteState } from "@/lib/db/items";
 
 export interface CollectionActionResult<T> {
   success: boolean;
@@ -97,5 +99,33 @@ export async function listCollectionOptions(): Promise<
     return { success: true, data: collections };
   } catch {
     return { success: false, error: "Could not load collections" };
+  }
+}
+
+const favoriteSchema = z.object({
+  id: collectionIdSchema,
+  isFavorite: z.boolean(),
+});
+
+// Sets the favorite flag to the value the client shows, so a stale page cannot flip it the wrong way
+export async function setCollectionFavorite(
+  data: unknown,
+): Promise<CollectionActionResult<FavoriteState>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "You must be signed in" };
+
+  const parsed = favoriteSchema.safeParse(data);
+  if (!parsed.success) return { success: false, error: "Invalid collection" };
+
+  try {
+    const state = await setCollectionFavoriteQuery(
+      session.user.id,
+      parsed.data.id,
+      parsed.data.isFavorite,
+    );
+    if (!state) return { success: false, error: "Collection not found" };
+    return { success: true, data: state };
+  } catch {
+    return { success: false, error: "Something went wrong. Please try again." };
   }
 }

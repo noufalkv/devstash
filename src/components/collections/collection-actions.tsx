@@ -3,6 +3,7 @@
 import { MoreHorizontal, Pencil, Star, Trash2 } from "lucide-react";
 import { useState } from "react";
 
+import { setCollectionFavorite } from "@/actions/collections";
 import { DeleteCollectionDialog } from "@/components/collections/delete-collection-dialog";
 import {
   EditCollectionDialog,
@@ -16,7 +17,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useFavoriteToggle } from "@/hooks/use-favorite-toggle";
 import { cn } from "@/lib/utils";
+
+function useCollectionFavorite(collection: CollectionMeta) {
+  return useFavoriteToggle(collection.isFavorite, (isFavorite) =>
+    setCollectionFavorite({ id: collection.id, isFavorite }),
+  );
+}
 
 type OpenDialog = "edit" | "delete" | null;
 
@@ -51,17 +59,20 @@ function CollectionDialogs({
 /** Favorite, Edit and Delete buttons for the collection page header. */
 export function CollectionHeaderActions({ collection }: { collection: CollectionMeta }) {
   const [openDialog, setOpenDialog] = useState<OpenDialog>(null);
+  const favorite = useCollectionFavorite(collection);
 
   return (
     <div className="flex items-center gap-1">
-      {/* Display only: favoriting is not implemented yet */}
       <Button
         variant="ghost"
         size="sm"
-        className={cn(collection.isFavorite && "text-yellow-400")}
+        aria-pressed={favorite.isFavorite}
+        disabled={favorite.isPending}
+        onClick={favorite.toggle}
+        className={cn(favorite.isFavorite && "text-yellow-400")}
       >
-        <Star className={cn(collection.isFavorite && "fill-yellow-400")} />
-        Favorite
+        <Star className={cn(favorite.isFavorite && "fill-yellow-400")} />
+        {favorite.isFavorite ? "Unfavorite" : "Favorite"}
       </Button>
       <Button variant="ghost" size="sm" onClick={() => setOpenDialog("edit")}>
         <Pencil />
@@ -96,6 +107,7 @@ export function CollectionCardMenu({
   className?: string;
 }) {
   const [openDialog, setOpenDialog] = useState<OpenDialog>(null);
+  const favorite = useCollectionFavorite(collection);
 
   return (
     <>
@@ -113,14 +125,13 @@ export function CollectionCardMenu({
           <MoreHorizontal />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-40">
-          {/* Display only: favoriting is not implemented yet */}
-          <DropdownMenuItem>
+          <DropdownMenuItem disabled={favorite.isPending} onClick={favorite.toggle}>
             <Star
               className={cn(
-                collection.isFavorite && "fill-yellow-400 text-yellow-400",
+                favorite.isFavorite && "fill-yellow-400 text-yellow-400",
               )}
             />
-            {collection.isFavorite ? "Unfavorite" : "Favorite"}
+            {favorite.isFavorite ? "Unfavorite" : "Favorite"}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setOpenDialog("edit")}>
             <Pencil />

@@ -15,7 +15,9 @@ import {
   createItem as createItemQuery,
   deleteItem as deleteItemQuery,
   getItemFile,
+  setItemFavorite as setItemFavoriteQuery,
   updateItem as updateItemQuery,
+  type FavoriteState,
   type ItemDetail,
 } from "@/lib/db/items";
 
@@ -164,6 +166,34 @@ export async function deleteItem(itemId: unknown): Promise<ItemActionResult<void
       await deleteFromR2(file.key).catch(() => undefined);
     }
     return { success: true };
+  } catch {
+    return { success: false, error: "Something went wrong. Please try again." };
+  }
+}
+
+const favoriteSchema = z.object({
+  id: z.string().min(1),
+  isFavorite: z.boolean(),
+});
+
+// Sets the favorite flag to the value the client shows, so a stale page cannot flip it the wrong way
+export async function setItemFavorite(
+  data: unknown,
+): Promise<ItemActionResult<FavoriteState>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "You must be signed in" };
+
+  const parsed = favoriteSchema.safeParse(data);
+  if (!parsed.success) return { success: false, error: "Invalid item" };
+
+  try {
+    const state = await setItemFavoriteQuery(
+      session.user.id,
+      parsed.data.id,
+      parsed.data.isFavorite,
+    );
+    if (!state) return { success: false, error: "Item not found" };
+    return { success: true, data: state };
   } catch {
     return { success: false, error: "Something went wrong. Please try again." };
   }

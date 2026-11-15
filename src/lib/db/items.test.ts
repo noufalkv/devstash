@@ -23,6 +23,7 @@ import {
   getItemDetail,
   getItemFile,
   getFavoriteItems,
+  setItemFavorite,
   getItemStats,
   getItemsByCollection,
   getItemsByType,
@@ -537,5 +538,37 @@ describe("getFavoriteItems", () => {
       "title",
       "updatedAt",
     ]);
+  });
+});
+
+describe("setItemFavorite", () => {
+  beforeEach(() => {
+    update.mockReset();
+  });
+
+  it("sets the flag on one of the user's items and returns the new state", async () => {
+    const state = { isFavorite: true, updatedAt: new Date("2026-11-15T00:00:00Z") };
+    update.mockResolvedValue(state);
+
+    await expect(setItemFavorite("user-1", "item-1", true)).resolves.toEqual(state);
+    expect(update).toHaveBeenCalledWith({
+      where: { id: "item-1", userId: "user-1" },
+      data: { isFavorite: true },
+      select: { isFavorite: true, updatedAt: true },
+    });
+  });
+
+  it("returns null when the item is missing or not the user's", async () => {
+    update.mockRejectedValue(
+      Object.assign(new Error("Record not found"), { code: "P2025" }),
+    );
+
+    await expect(setItemFavorite("user-1", "item-1", false)).resolves.toBeNull();
+  });
+
+  it("rethrows other errors", async () => {
+    update.mockRejectedValue(new Error("db down"));
+
+    await expect(setItemFavorite("user-1", "item-1", true)).rejects.toThrow("db down");
   });
 });

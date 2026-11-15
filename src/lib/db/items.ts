@@ -349,6 +349,30 @@ export async function getItemFile(
 }
 
 // Deletable only by its owner; returns false when the item is not found
+export interface FavoriteState {
+  isFavorite: boolean;
+  updatedAt: Date;
+}
+
+// Sets (not flips) one of the user's items as a favorite; null when missing or
+// owned by someone else
+export async function setItemFavorite(
+  userId: string,
+  id: string,
+  isFavorite: boolean,
+): Promise<FavoriteState | null> {
+  try {
+    return await prisma.item.update({
+      where: { id, userId },
+      data: { isFavorite },
+      select: { isFavorite: true, updatedAt: true },
+    });
+  } catch (error) {
+    if (isRecordNotFound(error)) return null;
+    throw error;
+  }
+}
+
 export async function deleteItem(id: string, userId: string): Promise<boolean> {
   try {
     await prisma.item.delete({ where: { id, userId } });

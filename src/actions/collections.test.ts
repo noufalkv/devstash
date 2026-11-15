@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   getCollectionOptions: vi.fn(),
   updateCollection: vi.fn(),
   deleteCollection: vi.fn(),
+  setCollectionFavorite: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
@@ -14,12 +15,14 @@ vi.mock("@/lib/db/collections", () => ({
   getCollectionOptions: mocks.getCollectionOptions,
   updateCollection: mocks.updateCollection,
   deleteCollection: mocks.deleteCollection,
+  setCollectionFavorite: mocks.setCollectionFavorite,
 }));
 
 import {
   createCollection,
   deleteCollection,
   listCollectionOptions,
+  setCollectionFavorite,
   updateCollection,
 } from "./collections";
 
@@ -235,6 +238,59 @@ describe("deleteCollection", () => {
     mocks.deleteCollection.mockRejectedValue(new Error("db down"));
 
     expect(await deleteCollection("col-1")).toEqual({
+      success: false,
+      error: "Something went wrong. Please try again.",
+    });
+  });
+});
+
+describe("setCollectionFavorite", () => {
+  const state = { isFavorite: true, updatedAt: new Date("2026-11-15T00:00:00Z") };
+
+  it("requires a session", async () => {
+    mocks.auth.mockResolvedValue(null);
+
+    expect(await setCollectionFavorite({ id: "col-1", isFavorite: true })).toEqual({
+      success: false,
+      error: "You must be signed in",
+    });
+    expect(mocks.setCollectionFavorite).not.toHaveBeenCalled();
+  });
+
+  it.each([{ id: "", isFavorite: true }, { id: "col-1" }, { id: 1, isFavorite: false }])(
+    "rejects invalid input %j",
+    async (input) => {
+      expect(await setCollectionFavorite(input)).toEqual({
+        success: false,
+        error: "Invalid collection",
+      });
+      expect(mocks.setCollectionFavorite).not.toHaveBeenCalled();
+    },
+  );
+
+  it("sets the value for the signed-in user and returns the new state", async () => {
+    mocks.setCollectionFavorite.mockResolvedValue(state);
+
+    expect(await setCollectionFavorite({ id: "col-1", isFavorite: true })).toEqual({
+      success: true,
+      data: state,
+    });
+    expect(mocks.setCollectionFavorite).toHaveBeenCalledWith("u1", "col-1", true);
+  });
+
+  it("reports a missing or foreign collection", async () => {
+    mocks.setCollectionFavorite.mockResolvedValue(null);
+
+    expect(await setCollectionFavorite({ id: "col-1", isFavorite: false })).toEqual({
+      success: false,
+      error: "Collection not found",
+    });
+  });
+
+  it("returns a generic error when the query throws", async () => {
+    mocks.setCollectionFavorite.mockRejectedValue(new Error("db down"));
+
+    expect(await setCollectionFavorite({ id: "col-1", isFavorite: true })).toEqual({
       success: false,
       error: "Something went wrong. Please try again.",
     });

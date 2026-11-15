@@ -23,6 +23,7 @@ import {
   getCollectionOptions,
   getCollectionsPage,
   getFavoriteCollections,
+  setCollectionFavorite,
   getRecentCollections,
   getSidebarCollections,
   updateCollection,
@@ -339,5 +340,37 @@ describe("getFavoriteCollections", () => {
       },
       { id: "col-2", name: "Empty", updatedAt, itemCount: 0, topItemType: null },
     ]);
+  });
+});
+
+describe("setCollectionFavorite", () => {
+  beforeEach(() => {
+    update.mockReset();
+  });
+
+  it("sets the flag on one of the user's collections and returns the new state", async () => {
+    const state = { isFavorite: true, updatedAt: new Date("2026-11-15T00:00:00Z") };
+    update.mockResolvedValue(state);
+
+    await expect(setCollectionFavorite("user-1", "col-1", true)).resolves.toEqual(state);
+    expect(update).toHaveBeenCalledWith({
+      where: { id: "col-1", userId: "user-1" },
+      data: { isFavorite: true },
+      select: { isFavorite: true, updatedAt: true },
+    });
+  });
+
+  it("returns null when the collection is missing or not the user's", async () => {
+    update.mockRejectedValue(
+      Object.assign(new Error("Record not found"), { code: "P2025" }),
+    );
+
+    await expect(setCollectionFavorite("user-1", "col-1", false)).resolves.toBeNull();
+  });
+
+  it("rethrows other errors", async () => {
+    update.mockRejectedValue(new Error("db down"));
+
+    await expect(setCollectionFavorite("user-1", "col-1", true)).rejects.toThrow("db down");
   });
 });
