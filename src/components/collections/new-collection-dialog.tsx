@@ -49,15 +49,29 @@ function NewCollectionForm({ onCreated }: { onCreated: () => void }) {
   );
 }
 
-export function NewCollectionDialog() {
-  const [open, setOpen] = useState(false);
+interface NewCollectionDialogProps {
+  /** Pass with `onOpenChange` to control the dialog from outside; the built-in trigger button is then not rendered. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+export function NewCollectionDialog({
+  open: controlledOpen,
+  onOpenChange,
+}: NewCollectionDialogProps = {}) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : uncontrolledOpen;
+  const setOpen = isControlled ? (onOpenChange ?? (() => {})) : setUncontrolledOpen;
 
   return (
     <>
-      <Button variant="outline" onClick={() => setOpen(true)}>
-        <FolderPlus />
-        New Collection
-      </Button>
+      {!isControlled && (
+        <Button variant="outline" onClick={() => setOpen(true)}>
+          <FolderPlus />
+          New Collection
+        </Button>
+      )}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
