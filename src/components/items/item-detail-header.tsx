@@ -3,7 +3,7 @@
 import { Copy, Download, Pencil, Pin, Star, type LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 
-import { setItemFavorite } from "@/actions/items";
+import { setItemFavorite, toggleItemPin } from "@/actions/items";
 import { ItemDeleteDialog } from "@/components/items/item-delete-dialog";
 import type { ItemDetailJson } from "@/components/items/item-drawer";
 import { ItemTypeIcon } from "@/components/items/item-type-icon";
@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useFavoriteToggle } from "@/hooks/use-favorite-toggle";
+import { usePinToggle } from "@/hooks/use-pin-toggle";
 import { getCopyText } from "@/lib/item-copy";
 import { cn } from "@/lib/utils";
 
@@ -87,6 +88,16 @@ function ItemActionBar({ item, onEdit, onDeleted, onUpdated }: ItemDetailHeaderP
         updatedAt: state.updatedAt.toISOString(),
       }),
   );
+  const pin = usePinToggle(
+    item.isPinned,
+    (isPinned) => toggleItemPin({ id: item.id, isPinned }),
+    (state) =>
+      onUpdated({
+        ...item,
+        isPinned: state.isPinned,
+        updatedAt: state.updatedAt.toISOString(),
+      }),
+  );
 
   async function handleCopy() {
     if (!copyText) return;
@@ -111,9 +122,12 @@ function ItemActionBar({ item, onEdit, onDeleted, onUpdated }: ItemDetailHeaderP
       />
       <ActionButton
         icon={Pin}
-        label="Pin"
-        className={cn(item.isPinned && "text-foreground")}
-        iconClassName={cn(item.isPinned && "fill-current")}
+        label={pin.isPinned ? "Unpin" : "Pin"}
+        aria-pressed={pin.isPinned}
+        disabled={pin.isPending}
+        onClick={pin.toggle}
+        className={cn(pin.isPinned && "text-foreground")}
+        iconClassName={cn(pin.isPinned && "fill-current")}
       />
       {copyText && <ActionButton icon={Copy} label="Copy" onClick={handleCopy} />}
       {item.contentType === "FILE" && (

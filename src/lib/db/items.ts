@@ -65,14 +65,24 @@ const itemSummarySelect = {
   tags: { select: { name: true }, orderBy: { name: "asc" } },
 } satisfies Prisma.ItemSelect;
 
-// Newest first; the id tie-break keeps page boundaries stable when dates match
+const NEWEST_FIRST: Prisma.ItemOrderByWithRelationInput[] = [
+  { createdAt: "desc" },
+  { id: "desc" },
+];
+
+// Newest first (pinned items before the rest when `pinnedFirst`); the id
+// tie-break keeps page boundaries stable when dates match
 async function findItemSummaries(
   userId: string,
-  args: Pick<Prisma.ItemFindManyArgs, "where" | "skip" | "take">,
+  args: Pick<Prisma.ItemFindManyArgs, "where" | "skip" | "take"> & {
+    pinnedFirst?: boolean;
+  },
 ): Promise<ItemSummary[]> {
   const items = await prisma.item.findMany({
     where: { ...args.where, userId },
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    orderBy: args.pinnedFirst
+      ? [{ isPinned: "desc" }, ...NEWEST_FIRST]
+      : NEWEST_FIRST,
     skip: args.skip,
     take: args.take,
     select: itemSummarySelect,
@@ -84,14 +94,15 @@ async function findItemSummaries(
   }));
 }
 
-// One page of the user's items matching `where`, plus the total across all pages
+// One page of the user's items matching `where`, pinned first, plus the total
+// across all pages
 async function findItemPage(
   userId: string,
   where: Prisma.ItemWhereInput,
   page: PageRequest,
 ): Promise<Paginated<ItemSummary>> {
   const [rows, total] = await Promise.all([
-    findItemSummaries(userId, { where, ...toSkipTake(page) }),
+    findItemSummaries(userId, { where, ...toSkipTake(page), pinnedFirst: true }),
     prisma.item.count({ where: { ...where, userId } }),
   ]);
   return { rows, total };
@@ -340,7 +351,6 @@ export async function getItemFile(
   return { key: item.fileUrl, name: item.fileName ?? "download" };
 }
 
-// Deletable only by its owner; returns false when the item is not found
 export interface FavoriteState {
   isFavorite: boolean;
   updatedAt: Date;
@@ -365,6 +375,31 @@ export async function setItemFavorite(
   }
 }
 
+export interface PinState {
+  isPinned: boolean;
+  updatedAt: Date;
+}
+
+// Sets (not flips) the pin on one of the user's items; null when missing or
+// owned by someone else
+export async function setItemPinned(
+  userId: string,
+  id: string,
+  isPinned: boolean,
+): Promise<PinState | null> {
+  try {
+    return await prisma.item.update({
+      where: { id, userId },
+      data: { isPinned },
+      select: { isPinned: true, updatedAt: true },
+    });
+  } catch (error) {
+    if (isRecordNotFound(error)) return null;
+    throw error;
+  }
+}
+
+// Deletable only by its owner; returns false when the item is not found
 export async function deleteItem(id: string, userId: string): Promise<boolean> {
   try {
     await prisma.item.delete({ where: { id, userId } });

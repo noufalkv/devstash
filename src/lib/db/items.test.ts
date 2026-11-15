@@ -24,6 +24,7 @@ import {
   getItemFile,
   getFavoriteItems,
   setItemFavorite,
+  setItemPinned,
   getItemStats,
   getItemsByCollection,
   getItemsByType,
@@ -170,8 +171,21 @@ describe("paginated item lists", () => {
     expect(result.total).toBe(45);
   });
 
-  it("orders by newest first with an id tie-break", async () => {
+  it("orders pinned items first, then newest first with an id tie-break", async () => {
     await getItemsByType("user-1", "snippet", { page: 1, perPage: 21 });
+    await getItemsByCollection("user-1", "col-1", { page: 1, perPage: 21 });
+
+    for (const [args] of findMany.mock.calls) {
+      expect(args.orderBy).toEqual([
+        { isPinned: "desc" },
+        { createdAt: "desc" },
+        { id: "desc" },
+      ]);
+    }
+  });
+
+  it("keeps recent items newest first without pinning them to the top", async () => {
+    await getRecentItems("user-1");
 
     expect(findMany.mock.calls[0][0].orderBy).toEqual([
       { createdAt: "desc" },
@@ -570,5 +584,37 @@ describe("setItemFavorite", () => {
     update.mockRejectedValue(new Error("db down"));
 
     await expect(setItemFavorite("user-1", "item-1", true)).rejects.toThrow("db down");
+  });
+});
+
+describe("setItemPinned", () => {
+  beforeEach(() => {
+    update.mockReset();
+  });
+
+  it("sets the pin on one of the user's items and returns the new state", async () => {
+    const state = { isPinned: true, updatedAt: new Date("2026-11-15T00:00:00Z") };
+    update.mockResolvedValue(state);
+
+    await expect(setItemPinned("user-1", "item-1", true)).resolves.toEqual(state);
+    expect(update).toHaveBeenCalledWith({
+      where: { id: "item-1", userId: "user-1" },
+      data: { isPinned: true },
+      select: { isPinned: true, updatedAt: true },
+    });
+  });
+
+  it("returns null when the item is missing or not the user's", async () => {
+    update.mockRejectedValue(
+      Object.assign(new Error("Record not found"), { code: "P2025" }),
+    );
+
+    await expect(setItemPinned("user-1", "item-1", false)).resolves.toBeNull();
+  });
+
+  it("rethrows other errors", async () => {
+    update.mockRejectedValue(new Error("db down"));
+
+    await expect(setItemPinned("user-1", "item-1", true)).rejects.toThrow("db down");
   });
 });
