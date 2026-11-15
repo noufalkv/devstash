@@ -53,8 +53,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
   callbacks: {
+    async jwt({ token, user }) {
+      if (user?.id) token.sub = user.id;
+
+      // Re-read on every auth() call so a webhook's change applies on the next request, without re-login
+      if (token.sub) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.sub },
+          select: { isPro: true },
+        });
+        token.isPro = dbUser?.isPro ?? false;
+      }
+      return token;
+    },
     session({ session, token }) {
       if (token.sub) session.user.id = token.sub;
+      session.user.isPro = token.isPro ?? false;
       return session;
     },
   },
