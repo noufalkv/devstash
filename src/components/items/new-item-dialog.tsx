@@ -212,21 +212,33 @@ function NewItemForm({
   );
 }
 
+interface NewItemDialogProps {
+  defaultType?: CreatableItemType;
+  label?: string;
+  /** Pass with `onOpenChange` to control the dialog from outside; the built-in trigger button is then not rendered. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
 export function NewItemDialog({
   defaultType,
   label = "New Item",
-}: {
-  defaultType?: CreatableItemType;
-  label?: string;
-}) {
-  const [open, setOpen] = useState(false);
+  open: controlledOpen,
+  onOpenChange,
+}: NewItemDialogProps) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : uncontrolledOpen;
+  const setOpen = isControlled ? (onOpenChange ?? (() => {})) : setUncontrolledOpen;
 
   return (
     <>
-      <Button onClick={() => setOpen(true)}>
-        <Plus />
-        {label}
-      </Button>
+      {!isControlled && (
+        <Button onClick={() => setOpen(true)}>
+          <Plus />
+          {label}
+        </Button>
+      )}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
