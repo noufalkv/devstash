@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { FolderPlus, Layers, PanelLeft, Plus, Search, Star } from "lucide-react";
+import { FolderPlus, PanelLeft, Plus, Search, Star } from "lucide-react";
 
 import { NewCollectionDialog } from "@/components/collections/new-collection-dialog";
 import { NewItemDialog } from "@/components/items/new-item-dialog";
 import { useSidebar } from "@/components/layout/sidebar-provider";
 import { useCommandPalette } from "@/components/search/command-palette-provider";
+import { LogoMark } from "@/components/shared/logo-mark";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -69,7 +70,7 @@ export function TopBar() {
         aria-label="DevStash dashboard"
         className="flex shrink-0 items-center gap-2 font-semibold"
       >
-        <Layers className="size-5 text-primary" />
+        <LogoMark className="size-7" iconClassName="size-4" />
         <span className="hidden sm:inline">DevStash</span>
       </Link>
 

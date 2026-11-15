@@ -42,8 +42,8 @@ export interface HomeLink {
 }
 
 export const SECTION_LINKS: HomeLink[] = [
-  { label: "Features", href: "#features" },
-  { label: "Pricing", href: "#pricing" },
+  { label: "Features", href: "/#features" },
+  { label: "Pricing", href: "/#pricing" },
 ];
 
 export const FOOTER_COLUMNS: { title: string; links: HomeLink[] }[] = [
