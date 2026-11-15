@@ -26,17 +26,8 @@ export function ItemCard({ item, variant = "grid" }: ItemCardProps) {
   return (
     <Card
       size="sm"
-      role="button"
-      tabIndex={0}
-      onClick={() => openItem(item.id)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          openItem(item.id);
-        }
-      }}
       className={cn(
-        "group/item cursor-pointer flex-row items-start gap-3 border-l-4 border-l-border px-3 transition-colors hover:bg-muted/40",
+        "group/item relative cursor-pointer flex-row items-start gap-3 border-l-4 border-l-border px-3 transition-colors hover:bg-muted/40 has-[[data-card-trigger]:focus-visible]:ring-2 has-[[data-card-trigger]:focus-visible]:ring-ring",
         variant === "grid" && "h-full",
       )}
       style={{ borderLeftColor: item.itemType.color }}
@@ -44,7 +35,15 @@ export function ItemCard({ item, variant = "grid" }: ItemCardProps) {
       <ItemTypeIcon itemType={item.itemType} labelled />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <p className="truncate text-sm font-medium">{item.title}</p>
+          {/* The button's ::after covers the whole card, so clicking anywhere opens the drawer */}
+          <button
+            type="button"
+            data-card-trigger
+            onClick={() => openItem(item.id)}
+            className="min-w-0 cursor-pointer truncate text-left text-sm font-medium outline-none after:absolute after:inset-0 after:rounded-xl"
+          >
+            {item.title}
+          </button>
           {item.isPinned && (
             <Pin className="size-3.5 shrink-0 text-muted-foreground" />
           )}
@@ -73,7 +72,13 @@ export function ItemCard({ item, variant = "grid" }: ItemCardProps) {
         )}
       </div>
       <div className="flex shrink-0 items-center gap-1">
-        {copyText && <QuickCopyButton text={copyText} title={item.title} />}
+        {copyText && (
+          <QuickCopyButton
+            text={copyText}
+            title={item.title}
+            className="relative z-10"
+          />
+        )}
         <span className="text-xs text-muted-foreground">
           {formatDate(item.createdAt, "short")}
         </span>

@@ -37,25 +37,21 @@ export function FileRow({ item }: { item: ItemSummary }) {
   const Icon = FILE_ICONS[getFileIconKind(item.fileName)];
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={() => openItem(item.id)}
-      onKeyDown={(event) => {
-        if (event.target !== event.currentTarget) return;
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          openItem(item.id);
-        }
-      }}
-      className="flex cursor-pointer items-center gap-3 rounded-xl border bg-card px-3 py-3 transition-colors hover:bg-muted/40 focus-visible:outline-2 focus-visible:outline-ring"
-    >
+    <div className="relative flex cursor-pointer items-center gap-3 rounded-xl border bg-card px-3 py-3 transition-colors hover:bg-muted/40 has-[[data-card-trigger]:focus-visible]:outline-2 has-[[data-card-trigger]:focus-visible]:outline-ring">
       <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
         <Icon className="size-4 text-muted-foreground" aria-hidden />
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-4">
         <div className="flex min-w-0 flex-1 items-center gap-1.5">
-          <p className="truncate text-sm font-medium">{name}</p>
+          {/* The button's ::after covers the whole row, so clicking anywhere opens the drawer */}
+          <button
+            type="button"
+            data-card-trigger
+            onClick={() => openItem(item.id)}
+            className="min-w-0 cursor-pointer truncate text-left text-sm font-medium outline-none after:absolute after:inset-0 after:rounded-xl"
+          >
+            {name}
+          </button>
           {item.isPinned && (
             <Pin className="size-3.5 shrink-0 text-muted-foreground" />
           )}
@@ -75,6 +71,7 @@ export function FileRow({ item }: { item: ItemSummary }) {
       <Button
         variant="ghost"
         size="icon"
+        className="relative z-10"
         nativeButton={false}
         render={
           <a
