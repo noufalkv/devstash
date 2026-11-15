@@ -79,6 +79,7 @@ function ItemDetailView({
         item={item}
         onEdit={() => setIsEditing(true)}
         onDeleted={onDeleted}
+        onUpdated={onUpdated}
       />
       <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-4">
         <ItemDescriptionSection description={item.description} />

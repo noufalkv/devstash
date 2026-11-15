@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { isRecordNotFound } from "@/lib/db/errors";
+import type { FavoriteState } from "@/lib/db/items";
 import {
   DASHBOARD_COLLECTIONS_LIMIT,
   toSkipTake,
@@ -215,6 +216,25 @@ export async function updateCollection(
       where: { id, userId },
       data: { name: data.name, description: data.description },
       select: { id: true, name: true, description: true, isFavorite: true },
+    });
+  } catch (error) {
+    if (isRecordNotFound(error)) return null;
+    throw error;
+  }
+}
+
+// Sets (not flips) one of the user's collections as a favorite; null when
+// missing or owned by someone else
+export async function setCollectionFavorite(
+  userId: string,
+  id: string,
+  isFavorite: boolean,
+): Promise<FavoriteState | null> {
+  try {
+    return await prisma.collection.update({
+      where: { id, userId },
+      data: { isFavorite },
+      select: { isFavorite: true, updatedAt: true },
     });
   } catch (error) {
     if (isRecordNotFound(error)) return null;

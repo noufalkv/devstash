@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   getItemFile: vi.fn(),
   deleteFromR2: vi.fn(),
   findOwnedCollectionIds: vi.fn(),
+  setItemFavorite: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
@@ -16,6 +17,7 @@ vi.mock("@/lib/db/items", () => ({
   deleteItem: mocks.deleteItem,
   createItem: mocks.createItem,
   getItemFile: mocks.getItemFile,
+  setItemFavorite: mocks.setItemFavorite,
 }));
 vi.mock("@/lib/db/collections", () => ({
   findOwnedCollectionIds: mocks.findOwnedCollectionIds,
@@ -25,7 +27,7 @@ vi.mock("@/lib/r2", () => ({
   isOwnedKey: (userId: string, key: string) => key.startsWith(`${userId}/`),
 }));
 
-import { createItem, deleteItem, updateItem } from "./items";
+import { createItem, deleteItem, setItemFavorite, updateItem } from "./items";
 
 const validData = {
   title: "  useAuth Hook  ",
@@ -438,5 +440,68 @@ describe("deleteItem with files", () => {
     mocks.deleteFromR2.mockRejectedValue(new Error("r2 down"));
 
     expect(await deleteItem("item-1")).toEqual({ success: true });
+  });
+});
+
+describe("setItemFavorite", () => {
+  const state = { isFavorite: true, updatedAt: new Date("2026-11-15T00:00:00Z") };
+
+  it("requires a session", async () => {
+    mocks.auth.mockResolvedValue(null);
+
+    expect(await setItemFavorite({ id: "item-1", isFavorite: true })).toEqual({
+      success: false,
+      error: "You must be signed in",
+    });
+    expect(mocks.setItemFavorite).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { id: "", isFavorite: true },
+    { id: "item-1" },
+    { id: "item-1", isFavorite: "yes" },
+    null,
+  ])("rejects invalid input %j", async (input) => {
+    expect(await setItemFavorite(input)).toEqual({
+      success: false,
+      error: "Invalid item",
+    });
+    expect(mocks.setItemFavorite).not.toHaveBeenCalled();
+  });
+
+  it("sets the value for the signed-in user and returns the new state", async () => {
+    mocks.setItemFavorite.mockResolvedValue(state);
+
+    expect(await setItemFavorite({ id: "item-1", isFavorite: true })).toEqual({
+      success: true,
+      data: state,
+    });
+    expect(mocks.setItemFavorite).toHaveBeenCalledWith("u1", "item-1", true);
+  });
+
+  it("passes false through to unfavorite", async () => {
+    mocks.setItemFavorite.mockResolvedValue({ ...state, isFavorite: false });
+
+    await setItemFavorite({ id: "item-1", isFavorite: false });
+
+    expect(mocks.setItemFavorite).toHaveBeenCalledWith("u1", "item-1", false);
+  });
+
+  it("reports a missing or foreign item", async () => {
+    mocks.setItemFavorite.mockResolvedValue(null);
+
+    expect(await setItemFavorite({ id: "item-1", isFavorite: true })).toEqual({
+      success: false,
+      error: "Item not found",
+    });
+  });
+
+  it("returns a generic error when the query throws", async () => {
+    mocks.setItemFavorite.mockRejectedValue(new Error("db down"));
+
+    expect(await setItemFavorite({ id: "item-1", isFavorite: true })).toEqual({
+      success: false,
+      error: "Something went wrong. Please try again.",
+    });
   });
 });
