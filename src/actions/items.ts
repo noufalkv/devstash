@@ -16,9 +16,11 @@ import {
   deleteItem as deleteItemQuery,
   getItemFile,
   setItemFavorite as setItemFavoriteQuery,
+  setItemPinned,
   updateItem as updateItemQuery,
   type FavoriteState,
   type ItemDetail,
+  type PinState,
 } from "@/lib/db/items";
 
 export interface ItemActionResult<T> {
@@ -191,6 +193,34 @@ export async function setItemFavorite(
       session.user.id,
       parsed.data.id,
       parsed.data.isFavorite,
+    );
+    if (!state) return { success: false, error: "Item not found" };
+    return { success: true, data: state };
+  } catch {
+    return { success: false, error: "Something went wrong. Please try again." };
+  }
+}
+
+const pinSchema = z.object({
+  id: z.string().min(1),
+  isPinned: z.boolean(),
+});
+
+// Sets the pin to the value the client shows, so a stale page cannot flip it the wrong way
+export async function toggleItemPin(
+  data: unknown,
+): Promise<ItemActionResult<PinState>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "You must be signed in" };
+
+  const parsed = pinSchema.safeParse(data);
+  if (!parsed.success) return { success: false, error: "Invalid item" };
+
+  try {
+    const state = await setItemPinned(
+      session.user.id,
+      parsed.data.id,
+      parsed.data.isPinned,
     );
     if (!state) return { success: false, error: "Item not found" };
     return { success: true, data: state };

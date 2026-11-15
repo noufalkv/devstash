@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   deleteFromR2: vi.fn(),
   findOwnedCollectionIds: vi.fn(),
   setItemFavorite: vi.fn(),
+  setItemPinned: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
@@ -18,6 +19,7 @@ vi.mock("@/lib/db/items", () => ({
   createItem: mocks.createItem,
   getItemFile: mocks.getItemFile,
   setItemFavorite: mocks.setItemFavorite,
+  setItemPinned: mocks.setItemPinned,
 }));
 vi.mock("@/lib/db/collections", () => ({
   findOwnedCollectionIds: mocks.findOwnedCollectionIds,
@@ -27,7 +29,13 @@ vi.mock("@/lib/r2", () => ({
   isOwnedKey: (userId: string, key: string) => key.startsWith(`${userId}/`),
 }));
 
-import { createItem, deleteItem, setItemFavorite, updateItem } from "./items";
+import {
+  createItem,
+  deleteItem,
+  setItemFavorite,
+  toggleItemPin,
+  updateItem,
+} from "./items";
 
 const validData = {
   title: "  useAuth Hook  ",
@@ -500,6 +508,69 @@ describe("setItemFavorite", () => {
     mocks.setItemFavorite.mockRejectedValue(new Error("db down"));
 
     expect(await setItemFavorite({ id: "item-1", isFavorite: true })).toEqual({
+      success: false,
+      error: "Something went wrong. Please try again.",
+    });
+  });
+});
+
+describe("toggleItemPin", () => {
+  const state = { isPinned: true, updatedAt: new Date("2026-11-15T00:00:00Z") };
+
+  it("requires a session", async () => {
+    mocks.auth.mockResolvedValue(null);
+
+    expect(await toggleItemPin({ id: "item-1", isPinned: true })).toEqual({
+      success: false,
+      error: "You must be signed in",
+    });
+    expect(mocks.setItemPinned).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { id: "", isPinned: true },
+    { id: "item-1" },
+    { id: "item-1", isPinned: "yes" },
+    null,
+  ])("rejects invalid input %j", async (input) => {
+    expect(await toggleItemPin(input)).toEqual({
+      success: false,
+      error: "Invalid item",
+    });
+    expect(mocks.setItemPinned).not.toHaveBeenCalled();
+  });
+
+  it("sets the value for the signed-in user and returns the new state", async () => {
+    mocks.setItemPinned.mockResolvedValue(state);
+
+    expect(await toggleItemPin({ id: "item-1", isPinned: true })).toEqual({
+      success: true,
+      data: state,
+    });
+    expect(mocks.setItemPinned).toHaveBeenCalledWith("u1", "item-1", true);
+  });
+
+  it("passes false through to unpin", async () => {
+    mocks.setItemPinned.mockResolvedValue({ ...state, isPinned: false });
+
+    await toggleItemPin({ id: "item-1", isPinned: false });
+
+    expect(mocks.setItemPinned).toHaveBeenCalledWith("u1", "item-1", false);
+  });
+
+  it("reports a missing or foreign item", async () => {
+    mocks.setItemPinned.mockResolvedValue(null);
+
+    expect(await toggleItemPin({ id: "item-1", isPinned: true })).toEqual({
+      success: false,
+      error: "Item not found",
+    });
+  });
+
+  it("returns a generic error when the query throws", async () => {
+    mocks.setItemPinned.mockRejectedValue(new Error("db down"));
+
+    expect(await toggleItemPin({ id: "item-1", isPinned: true })).toEqual({
       success: false,
       error: "Something went wrong. Please try again.",
     });
