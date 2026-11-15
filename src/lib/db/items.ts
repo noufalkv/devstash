@@ -1,6 +1,7 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { isRecordNotFound } from "@/lib/db/errors";
+import { SYSTEM_TYPE_ORDER } from "@/lib/item-type-order";
 import {
   DASHBOARD_RECENT_ITEMS_LIMIT,
   toSkipTake,
@@ -46,16 +47,7 @@ export interface SidebarItemType extends ItemSummaryType {
   count: number;
 }
 
-// Display order for system types in the sidebar
-export const SYSTEM_TYPE_ORDER = [
-  "snippet",
-  "prompt",
-  "command",
-  "note",
-  "file",
-  "image",
-  "link",
-];
+export { SYSTEM_TYPE_ORDER };
 
 const itemSummarySelect = {
   id: true,

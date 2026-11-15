@@ -4,42 +4,11 @@ import { Suspense } from "react";
 import { Star } from "lucide-react";
 
 import { auth } from "@/auth";
-import {
-  FavoriteCollectionRow,
-  FavoriteItemRow,
-} from "@/components/favorites/favorite-row";
+import { FavoritesList } from "@/components/favorites/favorites-list";
 import { getFavoriteCollections } from "@/lib/db/collections";
 import { getFavoriteItems } from "@/lib/db/items";
 
-function FavoritesSection({
-  title,
-  count,
-  emptyText,
-  children,
-}: {
-  title: string;
-  count: number;
-  emptyText: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="flex flex-col gap-1">
-      <h2 className="flex items-baseline gap-2 border-b border-border px-2 pb-1.5 font-mono text-xs font-medium tracking-wider text-muted-foreground uppercase">
-        {title}
-        <span className="text-foreground/70">{count}</span>
-      </h2>
-      {count > 0 ? (
-        <ul className="divide-y divide-border/50">{children}</ul>
-      ) : (
-        <p className="px-2 py-1.5 font-mono text-sm text-muted-foreground">
-          {emptyText}
-        </p>
-      )}
-    </section>
-  );
-}
-
-async function FavoritesList() {
+async function FavoritesContent() {
   // Reads the current time via auth(), so render at request time, not prerender
   await connection();
   const session = await auth();
@@ -62,28 +31,7 @@ async function FavoritesList() {
     );
   }
 
-  return (
-    <div className="flex flex-col gap-8">
-      <FavoritesSection title="Items" count={items.length} emptyText="No favorite items.">
-        {items.map((item) => (
-          <li key={item.id}>
-            <FavoriteItemRow item={item} />
-          </li>
-        ))}
-      </FavoritesSection>
-      <FavoritesSection
-        title="Collections"
-        count={collections.length}
-        emptyText="No favorite collections."
-      >
-        {collections.map((collection) => (
-          <li key={collection.id}>
-            <FavoriteCollectionRow collection={collection} />
-          </li>
-        ))}
-      </FavoritesSection>
-    </div>
-  );
+  return <FavoritesList items={items} collections={collections} />;
 }
 
 function FavoritesListSkeleton() {
@@ -106,7 +54,7 @@ export default function FavoritesPage() {
     <div className="flex flex-col gap-6">
       <h1 className="text-3xl font-semibold">Favorites</h1>
       <Suspense fallback={<FavoritesListSkeleton />}>
-        <FavoritesList />
+        <FavoritesContent />
       </Suspense>
     </div>
   );
