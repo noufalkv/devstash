@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Layers } from "lucide-react";
 
 import { SidebarNav, type SidebarData } from "@/components/layout/sidebar-nav";
 import { useSidebar } from "@/components/layout/sidebar-provider";
+import { LogoMark } from "@/components/shared/logo-mark";
 import {
   Sheet,
   SheetContent,
@@ -37,7 +37,7 @@ export function Sidebar(data: SidebarData) {
               onClick={() => setOpenMobile(false)}
               className="flex items-center gap-2 font-semibold"
             >
-              <Layers className="size-5 text-primary" />
+              <LogoMark className="size-7" iconClassName="size-4" />
               <span>DevStash</span>
             </Link>
           </div>
