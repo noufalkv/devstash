@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
@@ -10,9 +10,11 @@ const mocks = vi.hoisted(() => ({
   findOwnedCollectionIds: vi.fn(),
   setItemFavorite: vi.fn(),
   setItemPinned: vi.fn(),
+  getPlanUsage: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
+vi.mock("@/lib/db/users", () => ({ getPlanUsage: mocks.getPlanUsage }));
 vi.mock("@/lib/db/items", () => ({
   updateItem: mocks.updateItem,
   deleteItem: mocks.deleteItem,
@@ -50,7 +52,8 @@ const updatedItem = { id: "item-1", title: "useAuth Hook" };
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.auth.mockResolvedValue({ user: { id: "u1" } });
+  mocks.auth.mockResolvedValue({ user: { id: "u1", isPro: false } });
+  mocks.getPlanUsage.mockResolvedValue({ itemCount: 0, collectionCount: 0 });
   mocks.updateItem.mockResolvedValue(updatedItem);
   mocks.getItemFile.mockResolvedValue(null);
   mocks.deleteFromR2.mockResolvedValue(undefined);
@@ -244,6 +247,71 @@ describe("createItem", () => {
 
   beforeEach(() => {
     mocks.createItem.mockResolvedValue(updatedItem);
+  });
+
+  describe("free-tier limits", () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    it("skips the usage query when gating is off", async () => {
+      vi.stubEnv("ENFORCE_PRO_LIMITS", "");
+      mocks.getPlanUsage.mockResolvedValue({ itemCount: 50, collectionCount: 0 });
+
+      const result = await createItem(snippet);
+
+      expect(mocks.getPlanUsage).not.toHaveBeenCalled();
+      expect(result.success).toBe(true);
+    });
+
+    it("blocks a free user at 50 items when gating is on", async () => {
+      vi.stubEnv("ENFORCE_PRO_LIMITS", "true");
+      mocks.getPlanUsage.mockResolvedValue({ itemCount: 50, collectionCount: 0 });
+
+      const result = await createItem(snippet);
+
+      expect(mocks.getPlanUsage).toHaveBeenCalledWith("u1");
+      expect(result).toEqual({
+        success: false,
+        error: "Free accounts can store up to 50 items. Upgrade to Pro for unlimited items.",
+      });
+      expect(mocks.createItem).not.toHaveBeenCalled();
+    });
+
+    it("blocks file items for a free user when gating is on", async () => {
+      vi.stubEnv("ENFORCE_PRO_LIMITS", "true");
+
+      const result = await createItem({
+        ...snippet,
+        type: "file",
+        content: "",
+        language: "",
+        file: { key: "u1/abc-spec.pdf", name: "spec.pdf", size: 1024 },
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: "File and image uploads are a Pro feature",
+      });
+      expect(mocks.createItem).not.toHaveBeenCalled();
+    });
+
+    it("allows a free user under the limit when gating is on", async () => {
+      vi.stubEnv("ENFORCE_PRO_LIMITS", "true");
+      mocks.getPlanUsage.mockResolvedValue({ itemCount: 49, collectionCount: 0 });
+
+      expect((await createItem(snippet)).success).toBe(true);
+    });
+
+    it("does not limit Pro users or query their usage", async () => {
+      vi.stubEnv("ENFORCE_PRO_LIMITS", "true");
+      mocks.auth.mockResolvedValue({ user: { id: "u1", isPro: true } });
+
+      const result = await createItem(snippet);
+
+      expect(mocks.getPlanUsage).not.toHaveBeenCalled();
+      expect(result.success).toBe(true);
+    });
   });
 
   it("requires a session", async () => {

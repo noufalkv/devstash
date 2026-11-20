@@ -6,9 +6,13 @@ const mocks = vi.hoisted(() => ({
   compare: vi.fn(),
   hash: vi.fn(),
   prisma: { user: { findUnique: vi.fn(), update: vi.fn(), delete: vi.fn() } },
+  cancelSubscription: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth, signOut: mocks.signOut }));
+vi.mock("@/lib/stripe", () => ({
+  getStripe: () => ({ subscriptions: { cancel: mocks.cancelSubscription } }),
+}));
 vi.mock("@/lib/prisma", () => ({ prisma: mocks.prisma }));
 vi.mock("bcryptjs", () => ({ default: { compare: mocks.compare, hash: mocks.hash } }));
 
@@ -110,5 +114,50 @@ describe("deleteAccount", () => {
     expect(result).toEqual({ success: true });
     expect(mocks.prisma.user.delete).toHaveBeenCalledWith({ where: { id: "u1" } });
     expect(mocks.signOut).toHaveBeenCalledWith({ redirectTo: "/sign-in" });
+  });
+
+  it("does not call Stripe when there is no subscription", async () => {
+    mocks.cancelSubscription.mockClear();
+    mocks.prisma.user.findUnique.mockResolvedValue({
+      email: "a@b.com",
+      stripeSubscriptionId: null,
+    });
+    await deleteAccount(null, form({ confirmEmail: "a@b.com" }));
+    expect(mocks.cancelSubscription).not.toHaveBeenCalled();
+  });
+
+  it("cancels the Stripe subscription before deleting the user", async () => {
+    const order: string[] = [];
+    mocks.cancelSubscription.mockImplementation(async () => order.push("cancel"));
+    mocks.prisma.user.delete.mockImplementation(async () => order.push("delete"));
+    mocks.prisma.user.findUnique.mockResolvedValue({
+      email: "a@b.com",
+      stripeSubscriptionId: "sub_1",
+    });
+
+    const result = await deleteAccount(null, form({ confirmEmail: "a@b.com" }));
+
+    expect(result).toEqual({ success: true });
+    expect(mocks.cancelSubscription).toHaveBeenCalledWith("sub_1");
+    expect(order).toEqual(["cancel", "delete"]);
+  });
+
+  it("keeps the account when the Stripe cancel fails", async () => {
+    mocks.prisma.user.delete.mockClear();
+    mocks.signOut.mockClear();
+    mocks.cancelSubscription.mockRejectedValue(new Error("Stripe down"));
+    mocks.prisma.user.findUnique.mockResolvedValue({
+      email: "a@b.com",
+      stripeSubscriptionId: "sub_1",
+    });
+
+    const result = await deleteAccount(null, form({ confirmEmail: "a@b.com" }));
+
+    expect(result).toEqual({
+      success: false,
+      error: "Something went wrong. Please try again.",
+    });
+    expect(mocks.prisma.user.delete).not.toHaveBeenCalled();
+    expect(mocks.signOut).not.toHaveBeenCalled();
   });
 });

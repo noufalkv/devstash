@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { connection } from "next/server";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
@@ -8,6 +9,7 @@ import { ImageCard } from "@/components/items/image-card";
 import { ItemCard } from "@/components/items/item-card";
 import { NewItemDialog } from "@/components/items/new-item-dialog";
 import { Pagination } from "@/components/shared/pagination";
+import { Button } from "@/components/ui/button";
 import { getItemsByType, SYSTEM_TYPE_ORDER } from "@/lib/db/items";
 import {
   getPageCount,
@@ -16,9 +18,37 @@ import {
   parsePage,
 } from "@/lib/pagination";
 import { CREATABLE_ITEM_TYPES, type CreatableItemType } from "@/lib/item-fields";
+import { isFileItemType } from "@/lib/file-upload";
+import { canUseProFeature, isProGatingEnabled } from "@/lib/usage-limits";
 
 function toCreatableType(typeName: string): CreatableItemType | undefined {
   return CREATABLE_ITEM_TYPES.find((type) => type === typeName);
+}
+
+function AddItemButton({
+  type,
+  canUploadFiles,
+}: {
+  type: CreatableItemType;
+  canUploadFiles: boolean;
+}) {
+  if (!canUploadFiles && isFileItemType(type)) {
+    return (
+      <Button variant="outline" render={<Link href="/settings" />} nativeButton={false}>
+        Upgrade to add {type}s
+      </Button>
+    );
+  }
+  return <NewItemDialog defaultType={type} label={`Add ${type}`} canUploadFiles={canUploadFiles} />;
+}
+
+// File and image pages read the plan at request time; the rest of the header still prerenders.
+async function SessionAddItemButton({ type }: { type: CreatableItemType }) {
+  await connection();
+  const session = await auth();
+  return (
+    <AddItemButton type={type} canUploadFiles={canUseProFeature(session?.user?.isPro ?? false)} />
+  );
 }
 
 const TYPE_BY_SLUG = new Map(SYSTEM_TYPE_ORDER.map((name) => [`${name}s`, name]));
@@ -133,12 +163,20 @@ export default async function ItemsByTypePage({
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-3xl font-semibold">{title}</h1>
-        {creatableType && (
-          <NewItemDialog
-            defaultType={creatableType}
-            label={`Add ${typeName}`}
-          />
-        )}
+        {creatableType &&
+          (isFileItemType(creatableType) ? (
+            <Suspense
+              fallback={
+                isProGatingEnabled() ? null : (
+                  <AddItemButton type={creatableType} canUploadFiles />
+                )
+              }
+            >
+              <SessionAddItemButton type={creatableType} />
+            </Suspense>
+          ) : (
+            <AddItemButton type={creatableType} canUploadFiles />
+          ))}
       </div>
       <Suspense fallback={<ItemsGridSkeleton typeName={typeName} />}>
         <ItemsGrid

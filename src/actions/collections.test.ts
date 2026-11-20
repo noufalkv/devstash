@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
@@ -7,9 +7,11 @@ const mocks = vi.hoisted(() => ({
   updateCollection: vi.fn(),
   deleteCollection: vi.fn(),
   setCollectionFavorite: vi.fn(),
+  getPlanUsage: vi.fn(),
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
+vi.mock("@/lib/db/users", () => ({ getPlanUsage: mocks.getPlanUsage }));
 vi.mock("@/lib/db/collections", () => ({
   createCollection: mocks.createCollection,
   getCollectionOptions: mocks.getCollectionOptions,
@@ -37,8 +39,58 @@ const created = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.auth.mockResolvedValue({ user: { id: "u1" } });
+  mocks.auth.mockResolvedValue({ user: { id: "u1", isPro: false } });
   mocks.createCollection.mockResolvedValue(created);
+  mocks.getPlanUsage.mockResolvedValue({ itemCount: 0, collectionCount: 0 });
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
+describe("createCollection free-tier limit", () => {
+  it("skips the usage query when gating is off", async () => {
+    vi.stubEnv("ENFORCE_PRO_LIMITS", "");
+    mocks.getPlanUsage.mockResolvedValue({ itemCount: 0, collectionCount: 3 });
+
+    const result = await createCollection({ name: "Fourth" });
+
+    expect(mocks.getPlanUsage).not.toHaveBeenCalled();
+    expect(result.success).toBe(true);
+  });
+
+  it("blocks a free user at 3 collections when gating is on", async () => {
+    vi.stubEnv("ENFORCE_PRO_LIMITS", "true");
+    mocks.getPlanUsage.mockResolvedValue({ itemCount: 0, collectionCount: 3 });
+
+    const result = await createCollection({ name: "Fourth" });
+
+    expect(mocks.getPlanUsage).toHaveBeenCalledWith("u1");
+    expect(result).toEqual({
+      success: false,
+      error: "Free accounts can have up to 3 collections. Upgrade to Pro for unlimited collections.",
+    });
+    expect(mocks.createCollection).not.toHaveBeenCalled();
+  });
+
+  it("allows a free user under the limit when gating is on", async () => {
+    vi.stubEnv("ENFORCE_PRO_LIMITS", "true");
+    mocks.getPlanUsage.mockResolvedValue({ itemCount: 0, collectionCount: 2 });
+
+    const result = await createCollection({ name: "Third" });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("does not limit Pro users or query their usage", async () => {
+    vi.stubEnv("ENFORCE_PRO_LIMITS", "true");
+    mocks.auth.mockResolvedValue({ user: { id: "u1", isPro: true } });
+
+    const result = await createCollection({ name: "Tenth" });
+
+    expect(mocks.getPlanUsage).not.toHaveBeenCalled();
+    expect(result.success).toBe(true);
+  });
 });
 
 describe("createCollection", () => {

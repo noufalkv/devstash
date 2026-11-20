@@ -3,11 +3,19 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { isFileItemType, resolveContentType, validateFile } from "@/lib/file-upload";
 import { buildFileKey, uploadToR2 } from "@/lib/r2";
+import { canUseProFeature } from "@/lib/usage-limits";
 
 export async function POST(request: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  // Checked before reading the body, so free users never stream a file to the server
+  if (!canUseProFeature(session.user.isPro)) {
+    return NextResponse.json(
+      { error: "File and image uploads are a Pro feature" },
+      { status: 403 },
+    );
   }
 
   let formData: FormData;

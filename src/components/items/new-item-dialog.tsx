@@ -1,6 +1,7 @@
 "use client";
 
 import { Plus } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -10,6 +11,7 @@ import { CollectionPicker } from "@/components/items/collection-picker";
 import { FileUpload } from "@/components/items/file-upload";
 import { FormField } from "@/components/items/form-field";
 import { ItemContentField } from "@/components/items/item-content-field";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -34,27 +36,47 @@ function ItemTypePicker({
   value,
   onChange,
   disabled,
+  canUploadFiles,
 }: {
   value: CreatableItemType;
   onChange: (type: CreatableItemType) => void;
   disabled: boolean;
+  canUploadFiles: boolean;
 }) {
   return (
-    <div className="flex flex-wrap gap-1.5" role="group" aria-label="Type">
-      {CREATABLE_ITEM_TYPES.map((name) => (
-        <Button
-          key={name}
-          type="button"
-          size="sm"
-          variant={value === name ? "default" : "outline"}
-          aria-pressed={value === name}
-          className="capitalize"
-          disabled={disabled}
-          onClick={() => onChange(name)}
-        >
-          {name}
-        </Button>
-      ))}
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Type">
+        {CREATABLE_ITEM_TYPES.map((name) => {
+          const locked = !canUploadFiles && isFileItemType(name);
+          return (
+            <Button
+              key={name}
+              type="button"
+              size="sm"
+              variant={value === name ? "default" : "outline"}
+              aria-pressed={value === name}
+              className="capitalize"
+              disabled={disabled || locked}
+              onClick={() => onChange(name)}
+            >
+              {name}
+              {locked && (
+                <Badge variant="outline" className="px-1 text-[10px] uppercase">
+                  Pro
+                </Badge>
+              )}
+            </Button>
+          );
+        })}
+      </div>
+      {!canUploadFiles && (
+        <p className="text-sm text-muted-foreground">
+          File and image uploads are part of Pro.{" "}
+          <Link href="/settings" className="font-medium text-foreground underline underline-offset-4">
+            Upgrade
+          </Link>
+        </p>
+      )}
     </div>
   );
 }
@@ -62,13 +84,17 @@ function ItemTypePicker({
 function NewItemForm({
   onCreated,
   defaultType,
+  canUploadFiles,
 }: {
   onCreated: () => void;
   defaultType?: CreatableItemType;
+  canUploadFiles: boolean;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [type, setType] = useState<CreatableItemType>(defaultType ?? "snippet");
+  const [type, setType] = useState<CreatableItemType>(() =>
+    defaultType && (canUploadFiles || !isFileItemType(defaultType)) ? defaultType : "snippet",
+  );
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [content, setContent] = useState("");
@@ -119,6 +145,7 @@ function NewItemForm({
       <ItemTypePicker
         value={type}
         disabled={isPending}
+        canUploadFiles={canUploadFiles}
         onChange={(name) => {
           setType(name);
           setFile(null);
@@ -215,6 +242,8 @@ function NewItemForm({
 interface NewItemDialogProps {
   defaultType?: CreatableItemType;
   label?: string;
+  /** False for free users when ENFORCE_PRO_LIMITS is on: File and Image are disabled with an Upgrade link. */
+  canUploadFiles?: boolean;
   /** Pass with `onOpenChange` to control the dialog from outside; the built-in trigger button is then not rendered. */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -223,6 +252,7 @@ interface NewItemDialogProps {
 export function NewItemDialog({
   defaultType,
   label = "New Item",
+  canUploadFiles = true,
   open: controlledOpen,
   onOpenChange,
 }: NewItemDialogProps) {
@@ -250,6 +280,7 @@ export function NewItemDialog({
           <NewItemForm
             onCreated={() => setOpen(false)}
             defaultType={defaultType}
+            canUploadFiles={canUploadFiles}
           />
         </DialogContent>
       </Dialog>

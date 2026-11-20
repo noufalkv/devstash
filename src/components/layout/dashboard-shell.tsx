@@ -17,6 +17,7 @@ import {
 import { getSidebarCollections } from "@/lib/db/collections";
 import { getSearchItems, getUserItemTypeCounts } from "@/lib/db/items";
 import { getEditorPreferences, getSidebarUser } from "@/lib/db/users";
+import { canUseProFeature, isProGatingEnabled } from "@/lib/usage-limits";
 
 async function requireUserId(): Promise<string> {
   await connection();
@@ -59,6 +60,14 @@ async function SearchPalette() {
   );
 }
 
+// Reads the plan at request time. The Suspense fallback renders the same bar, allowing uploads
+// exactly when gating is off, so the bar shows at once and only free users see it change.
+async function SessionTopBar() {
+  await connection();
+  const session = await auth();
+  return <TopBar canUploadFiles={canUseProFeature(session?.user?.isPro ?? false)} />;
+}
+
 async function EditorPreferencesLoader() {
   const userId = await requireUserId();
   const preferences = await getEditorPreferences(userId);
@@ -72,7 +81,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         <EditorPreferencesProvider>
           <ItemDrawerProvider>
             <div className="flex min-h-full flex-1 flex-col">
-              <TopBar />
+              <Suspense fallback={<TopBar canUploadFiles={!isProGatingEnabled()} />}>
+                <SessionTopBar />
+              </Suspense>
               <div className="flex flex-1">
                 <Suspense fallback={<SidebarSkeleton />}>
                   <DashboardSidebar />
