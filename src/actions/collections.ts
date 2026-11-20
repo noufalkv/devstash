@@ -13,6 +13,8 @@ import {
   type CollectionSummary,
 } from "@/lib/db/collections";
 import type { FavoriteState } from "@/lib/db/items";
+import { getPlanUsage } from "@/lib/db/users";
+import { canUseProFeature, getCollectionLimitError } from "@/lib/usage-limits";
 
 export interface CollectionActionResult<T> {
   success: boolean;
@@ -38,6 +40,13 @@ export async function createCollection(
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message };
 
   try {
+    // Pro users and an unset ENFORCE_PRO_LIMITS skip the usage query entirely
+    if (!canUseProFeature(session.user.isPro)) {
+      const usage = await getPlanUsage(session.user.id);
+      const limitError = getCollectionLimitError({ isPro: false, ...usage });
+      if (limitError) return { success: false, error: limitError };
+    }
+
     const collection = await createCollectionQuery(session.user.id, parsed.data);
     return { success: true, data: collection };
   } catch {

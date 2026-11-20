@@ -5,6 +5,7 @@ import { z } from "zod";
 import { auth, signOut } from "@/auth";
 import { DEMO_USER_EMAIL } from "@/lib/db/demo-user";
 import { prisma } from "@/lib/prisma";
+import { getStripe } from "@/lib/stripe";
 
 export interface ProfileActionResult {
   success: boolean;
@@ -69,7 +70,7 @@ export async function deleteAccount(
   try {
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { email: true },
+      select: { email: true, stripeSubscriptionId: true },
     });
     if (!user) return { success: false, error: "Account not found" };
     if (user.email === DEMO_USER_EMAIL) {
@@ -79,6 +80,11 @@ export async function deleteAccount(
     const confirmEmail = String(formData.get("confirmEmail") ?? "").trim().toLowerCase();
     if (confirmEmail !== user.email.toLowerCase()) {
       return { success: false, error: "The email you typed doesn't match your account" };
+    }
+
+    if (user.stripeSubscriptionId) {
+      // A Stripe error fails the delete rather than keep billing a deleted account
+      await getStripe().subscriptions.cancel(user.stripeSubscriptionId);
     }
 
     await prisma.user.delete({ where: { id: session.user.id } });

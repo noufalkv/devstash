@@ -10,7 +10,9 @@ import {
 } from "@/lib/item-fields";
 import { isFileItemType, validateFile } from "@/lib/file-upload";
 import { deleteFromR2, isOwnedKey } from "@/lib/r2";
+import { canUseProFeature, getItemLimitError } from "@/lib/usage-limits";
 import { findOwnedCollectionIds } from "@/lib/db/collections";
+import { getPlanUsage } from "@/lib/db/users";
 import {
   createItem as createItemQuery,
   deleteItem as deleteItemQuery,
@@ -110,6 +112,13 @@ export async function createItem(
   }
 
   try {
+    // Pro users and an unset ENFORCE_PRO_LIMITS skip the usage query entirely
+    if (!canUseProFeature(session.user.isPro)) {
+      const usage = await getPlanUsage(session.user.id);
+      const limitError = getItemLimitError({ isPro: false, ...usage }, parsed.data.type);
+      if (limitError) return { success: false, error: limitError };
+    }
+
     const collectionIds = await findOwnedCollectionIds(
       session.user.id,
       parsed.data.collectionIds,

@@ -45,7 +45,12 @@ function CreateMenu({ onSelect }: { onSelect: (dialog: CreateDialog) => void }) 
   );
 }
 
-export function TopBar() {
+interface TopBarProps {
+  /** False for free users when ENFORCE_PRO_LIMITS is on. */
+  canUploadFiles: boolean;
+}
+
+export function TopBar({ canUploadFiles }: TopBarProps) {
   const { toggleSidebar } = useSidebar();
   const { setOpen: setPaletteOpen } = useCommandPalette();
   const [createDialog, setCreateDialog] = useState<CreateDialog>(null);
@@ -131,6 +136,7 @@ export function TopBar() {
       <NewItemDialog
         open={createDialog === "item"}
         onOpenChange={dialogOpenChange("item")}
+        canUploadFiles={canUploadFiles}
       />
       <NewCollectionDialog
         open={createDialog === "collection"}
