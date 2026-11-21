@@ -83,7 +83,7 @@ function ItemDetailView({
       />
       <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-4">
         <ItemDescriptionSection description={item.description} />
-        <ItemBodySection item={item} />
+        <ItemBodySection item={item} onUpdated={onUpdated} />
         <Separator />
         <ItemTagsSection tags={item.tags} />
         <ItemCollectionsSection collections={item.collections} />

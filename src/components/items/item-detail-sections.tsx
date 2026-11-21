@@ -41,7 +41,14 @@ function Section({
 }
 
 /** The item's main payload: text content, link URL or uploaded file. Renders nothing when there is none. */
-export function ItemBodySection({ item }: { item: ItemDetailJson }) {
+export function ItemBodySection({
+  item,
+  onUpdated,
+}: {
+  item: ItemDetailJson;
+  /** Receives the item with new content after an AI-optimized prompt is saved. */
+  onUpdated?: (item: ItemDetailJson) => void;
+}) {
   if (item.contentType === "TEXT" && item.content) {
     return (
       <Section label="Content">
@@ -51,6 +58,8 @@ export function ItemBodySection({ item }: { item: ItemDetailJson }) {
           language={item.language}
           readOnly
           explainItemId={item.id}
+          optimizeItemId={item.itemType.name === "prompt" ? item.id : undefined}
+          onOptimizedSaved={(saved) => onUpdated?.({ ...item, ...saved })}
         />
       </Section>
     );

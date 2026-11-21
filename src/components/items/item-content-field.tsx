@@ -2,6 +2,7 @@
 
 import { CodeEditor } from "@/components/items/code-editor";
 import { MarkdownEditor } from "@/components/items/markdown-editor";
+import type { SavedPromptContent } from "@/components/items/prompt-optimization";
 import { Textarea } from "@/components/ui/textarea";
 import { CODE_EDITOR_TYPES, MARKDOWN_EDITOR_TYPES } from "@/lib/item-fields";
 import { cn } from "@/lib/utils";
@@ -14,6 +15,10 @@ type ItemContentFieldProps = {
   id?: string;
   /** Saved item id; shows the AI Explain button in the code editor. */
   explainItemId?: string;
+  /** Saved item id; shows the AI Optimize button for prompts. */
+  optimizeItemId?: string;
+  /** Called after an optimized prompt is accepted and saved. */
+  onOptimizedSaved?: (saved: SavedPromptContent) => void;
   /** Extra classes for the plain-text Textarea fallback. */
   textareaClassName?: string;
 } & (
@@ -28,6 +33,8 @@ export function ItemContentField({
   language,
   id,
   explainItemId,
+  optimizeItemId,
+  onOptimizedSaved,
   textareaClassName,
   readOnly,
   onChange,
@@ -51,6 +58,8 @@ export function ItemContentField({
         value={value}
         onChange={onChange}
         readOnly={readOnly}
+        optimizeItemId={optimizeItemId}
+        onOptimizedSaved={onOptimizedSaved}
       />
     );
   }

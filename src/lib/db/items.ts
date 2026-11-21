@@ -399,6 +399,30 @@ export async function setItemPinned(
   }
 }
 
+export interface ContentState {
+  content: string | null;
+  updatedAt: Date;
+}
+
+// Replaces only the text content of one of the user's text items (title, tags and
+// collections are untouched); null when the item is missing, not owned or not text
+export async function setItemContent(
+  userId: string,
+  id: string,
+  content: string,
+): Promise<ContentState | null> {
+  try {
+    return await prisma.item.update({
+      where: { id, userId, contentType: "TEXT" },
+      data: { content },
+      select: { content: true, updatedAt: true },
+    });
+  } catch (error) {
+    if (isRecordNotFound(error)) return null;
+    throw error;
+  }
+}
+
 // Deletable only by its owner; returns false when the item is not found
 export async function deleteItem(id: string, userId: string): Promise<boolean> {
   try {

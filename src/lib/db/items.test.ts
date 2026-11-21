@@ -24,6 +24,7 @@ import {
   getItemFile,
   getFavoriteItems,
   setItemFavorite,
+  setItemContent,
   setItemPinned,
   getItemStats,
   getItemsByCollection,
@@ -616,5 +617,37 @@ describe("setItemPinned", () => {
     update.mockRejectedValue(new Error("db down"));
 
     await expect(setItemPinned("user-1", "item-1", true)).rejects.toThrow("db down");
+  });
+});
+
+describe("setItemContent", () => {
+  beforeEach(() => {
+    update.mockReset();
+  });
+
+  it("replaces only the content of one of the user's text items", async () => {
+    const state = { content: "New prompt", updatedAt: new Date("2026-11-21T00:00:00Z") };
+    update.mockResolvedValue(state);
+
+    await expect(setItemContent("user-1", "item-1", "New prompt")).resolves.toEqual(state);
+    expect(update).toHaveBeenCalledWith({
+      where: { id: "item-1", userId: "user-1", contentType: "TEXT" },
+      data: { content: "New prompt" },
+      select: { content: true, updatedAt: true },
+    });
+  });
+
+  it("returns null when the item is missing, not the user's or not text", async () => {
+    update.mockRejectedValue(
+      Object.assign(new Error("Record not found"), { code: "P2025" }),
+    );
+
+    await expect(setItemContent("user-1", "item-1", "New prompt")).resolves.toBeNull();
+  });
+
+  it("rethrows other errors", async () => {
+    update.mockRejectedValue(new Error("db down"));
+
+    await expect(setItemContent("user-1", "item-1", "New prompt")).rejects.toThrow("db down");
   });
 });
