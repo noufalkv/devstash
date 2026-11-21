@@ -1,8 +1,6 @@
 "use client";
 
-import Link from "next/link";
-
-import { SIDEBAR_LINK_CLASS, SidebarSection } from "@/components/layout/sidebar-section";
+import { SidebarLink, SidebarSection } from "@/components/layout/sidebar-section";
 import { Badge } from "@/components/ui/badge";
 import type { SidebarItemType } from "@/lib/db/items";
 import { ITEM_TYPE_ICONS } from "@/lib/item-type-icons";
@@ -25,12 +23,7 @@ export function SidebarTypes({ itemTypes, onNavigate }: SidebarTypesProps) {
       {itemTypes.map((type) => {
         const Icon = ITEM_TYPE_ICONS[type.icon];
         return (
-          <Link
-            key={type.id}
-            href={`/items/${type.name}s`}
-            onClick={onNavigate}
-            className={SIDEBAR_LINK_CLASS}
-          >
+          <SidebarLink key={type.id} href={`/items/${type.name}s`} onNavigate={onNavigate}>
             {Icon && (
               <Icon className="size-4 shrink-0" style={{ color: type.color }} />
             )}
@@ -44,7 +37,7 @@ export function SidebarTypes({ itemTypes, onNavigate }: SidebarTypesProps) {
               </Badge>
             )}
             <span className="text-xs text-muted-foreground">{type.count}</span>
-          </Link>
+          </SidebarLink>
         );
       })}
     </SidebarSection>

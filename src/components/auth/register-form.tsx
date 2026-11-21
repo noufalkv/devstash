@@ -6,6 +6,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import { GitHubSignIn } from "@/components/auth/github-sign-in";
 import { ResendVerificationButton } from "@/components/auth/resend-verification-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -91,56 +92,61 @@ export function RegisterForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="name">Name</Label>
-        <Input id="name" name="name" autoComplete="name" required />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input
-          id="email"
-          name="email"
-          type="email"
-          autoComplete="email"
-          placeholder="you@example.com"
-          required
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          required
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="confirmPassword">Confirm password</Label>
-        <Input
-          id="confirmPassword"
-          name="confirmPassword"
-          type="password"
-          autoComplete="new-password"
-          required
-        />
-      </div>
-      {error && (
-        <p role="alert" className="text-sm text-destructive">
-          {error}
-        </p>
-      )}
-      <Button type="submit" className="w-full" disabled={pending}>
-        {pending ? "Creating account..." : "Create account"}
-      </Button>
+    <div className="space-y-4">
+      <form onSubmit={handleSubmit} noValidate className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="name">Name</Label>
+          <Input id="name" name="name" autoComplete="name" required />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            placeholder="you@example.com"
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="password">Password</Label>
+          <Input
+            id="password"
+            name="password"
+            type="password"
+            autoComplete="new-password"
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="confirmPassword">Confirm password</Label>
+          <Input
+            id="confirmPassword"
+            name="confirmPassword"
+            type="password"
+            autoComplete="new-password"
+            required
+          />
+        </div>
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
+        <Button type="submit" className="w-full" disabled={pending}>
+          {pending ? "Creating account..." : "Create account"}
+        </Button>
+      </form>
+
+      <GitHubSignIn label="Sign up with GitHub" callbackUrl="/dashboard" />
+
       <p className="text-center text-sm text-muted-foreground">
         Already have an account?{" "}
         <Link href="/sign-in" className="text-foreground underline underline-offset-4">
           Sign in
         </Link>
       </p>
-    </form>
+    </div>
   );
 }
