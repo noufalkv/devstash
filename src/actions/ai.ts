@@ -8,12 +8,15 @@ import {
   cleanDescription,
   DESCRIPTION_INSTRUCTIONS,
 } from "@/lib/ai-description";
+import { buildExplainPrompt, cleanExplanation, EXPLAIN_INSTRUCTIONS } from "@/lib/ai-explain";
 import {
   AUTO_TAG_INSTRUCTIONS,
   buildAutoTagPrompt,
   normalizeSuggestedTags,
   parseTagResponse,
 } from "@/lib/ai-tags";
+import { getItemDetail } from "@/lib/db/items";
+import { CODE_EDITOR_TYPES } from "@/lib/item-fields";
 import { AI_MODEL, getOpenAI, isAiConfigured } from "@/lib/openai";
 import { checkRateLimit, rateLimitMessage } from "@/lib/rate-limit";
 import { canUseProFeature } from "@/lib/usage-limits";
@@ -124,6 +127,59 @@ export async function generateDescription(
     return { success: true, data: { description } };
   } catch (error) {
     console.error("generateDescription failed:", error);
+    return { success: false, error: AI_ERROR };
+  }
+}
+
+const explainSchema = z.object({ itemId: z.string().trim().min(1, "Invalid item").max(100) });
+
+// Loads the code by owned item id, so the action only explains the user's own snippets and
+// commands and cannot be used as a general-purpose proxy to the model.
+export async function explainCode(
+  input: unknown,
+): Promise<AiActionResult<{ explanation: string }>> {
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) return { success: false, error: "You must be signed in" };
+  if (!canUseProFeature(session.user.isPro)) {
+    return { success: false, error: "AI code explanations are a Pro feature", upgrade: true };
+  }
+  if (!isAiConfigured()) return { success: false, error: AI_ERROR };
+
+  const parsed = explainSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
+  // Checked before the rate limit so a bad id does not use up quota
+  const item = await getItemDetail(parsed.data.itemId, userId);
+  if (!item || !CODE_EDITOR_TYPES.has(item.itemType.name)) {
+    return { success: false, error: "Item not found" };
+  }
+  if (!item.content?.trim()) return { success: false, error: "There is no code to explain" };
+
+  const { success, reset } = await checkRateLimit("ai", userId);
+  if (!success) return { success: false, error: rateLimitMessage(reset), rateLimited: true };
+
+  try {
+    const response = await getOpenAI().responses.create({
+      model: AI_MODEL,
+      instructions: EXPLAIN_INSTRUCTIONS,
+      input: buildExplainPrompt({
+        type: item.itemType.name,
+        title: item.title,
+        content: item.content,
+        language: item.language,
+      }),
+      reasoning: { effort: "low" },
+      store: false,
+    });
+
+    const explanation = cleanExplanation(response.output_text);
+    if (!explanation) return { success: false, error: "Could not explain this code" };
+    return { success: true, data: { explanation } };
+  } catch (error) {
+    console.error("explainCode failed:", error);
     return { success: false, error: AI_ERROR };
   }
 }

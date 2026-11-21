@@ -74,7 +74,10 @@ async function SessionTopBar() {
 async function AiAccessLoader() {
   await connection();
   const session = await auth();
-  return <AiAccessHydrator canUseAi={canUseProFeature(session?.user?.isPro ?? false)} />;
+  if (!session?.user) return null;
+  return (
+    <AiAccessHydrator access={canUseProFeature(session.user.isPro) ? "allowed" : "locked"} />
+  );
 }
 
 async function EditorPreferencesLoader() {

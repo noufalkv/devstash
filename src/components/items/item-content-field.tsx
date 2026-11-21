@@ -12,6 +12,8 @@ type ItemContentFieldProps = {
   value: string;
   language?: string | null;
   id?: string;
+  /** Saved item id; shows the AI Explain button in the code editor. */
+  explainItemId?: string;
   /** Extra classes for the plain-text Textarea fallback. */
   textareaClassName?: string;
 } & (
@@ -25,6 +27,7 @@ export function ItemContentField({
   value,
   language,
   id,
+  explainItemId,
   textareaClassName,
   readOnly,
   onChange,
@@ -36,6 +39,7 @@ export function ItemContentField({
         onChange={onChange}
         language={language}
         readOnly={readOnly}
+        explainItemId={explainItemId}
       />
     );
   }
