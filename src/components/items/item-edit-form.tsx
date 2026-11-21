@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { updateItem } from "@/actions/items";
+import { DescriptionGenerator } from "@/components/items/description-generator";
 import { FormField } from "@/components/items/form-field";
 import { ItemContentField } from "@/components/items/item-content-field";
 import { LanguageSelect } from "@/components/items/language-select";
@@ -85,9 +86,9 @@ export function ItemEditForm({ item, onCancel, onSaved }: ItemEditFormProps) {
   const showLanguage = LANGUAGE_TYPES.has(typeName);
   const showUrl = URL_TYPES.has(typeName);
   // What the AI reads besides the title: the text content, the link URL or the file name
-  let tagSource = item.fileName;
-  if (showContent) tagSource = content;
-  else if (showUrl) tagSource = url;
+  let aiSource = item.fileName;
+  if (showContent) aiSource = content;
+  else if (showUrl) aiSource = url;
 
   function handleSave() {
     startTransition(async () => {
@@ -137,7 +138,21 @@ export function ItemEditForm({ item, onCancel, onSaved }: ItemEditFormProps) {
           />
         </FormField>
 
-        <FormField id="item-description" label="Description">
+        <FormField
+          id="item-description"
+          label="Description"
+          action={
+            <DescriptionGenerator
+              type={typeName}
+              title={title}
+              content={aiSource}
+              language={showLanguage ? language : null}
+              tags={tags}
+              onGenerated={setDescription}
+              disabled={isPending}
+            />
+          }
+        >
           <Textarea
             id="item-description"
             value={description}
@@ -188,7 +203,7 @@ export function ItemEditForm({ item, onCancel, onSaved }: ItemEditFormProps) {
           <TagSuggestions
             type={typeName}
             title={title}
-            content={tagSource}
+            content={aiSource}
             tags={tags}
             onTagsChange={setTags}
             disabled={isPending}
