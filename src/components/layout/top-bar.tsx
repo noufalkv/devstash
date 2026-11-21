@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { FolderPlus, PanelLeft, Plus, Search, Star } from "lucide-react";
+import { FolderPlus, PanelLeft, Plus, Search, Sparkles, Star } from "lucide-react";
 
 import { NewCollectionDialog } from "@/components/collections/new-collection-dialog";
 import { NewItemDialog } from "@/components/items/new-item-dialog";
@@ -48,9 +48,11 @@ function CreateMenu({ onSelect }: { onSelect: (dialog: CreateDialog) => void }) 
 interface TopBarProps {
   /** False for free users when ENFORCE_PRO_LIMITS is on. */
   canUploadFiles: boolean;
+  /** True for signed-in free users; shows the Upgrade link. */
+  showUpgrade: boolean;
 }
 
-export function TopBar({ canUploadFiles }: TopBarProps) {
+export function TopBar({ canUploadFiles, showUpgrade }: TopBarProps) {
   const { toggleSidebar } = useSidebar();
   const { setOpen: setPaletteOpen } = useCommandPalette();
   const [createDialog, setCreateDialog] = useState<CreateDialog>(null);
@@ -94,6 +96,18 @@ export function TopBar({ canUploadFiles }: TopBarProps) {
       </button>
 
       <div className="ml-auto flex shrink-0 items-center gap-2 sm:ml-0">
+        {showUpgrade && (
+          <Button
+            variant="ghost"
+            aria-label="Upgrade to Pro"
+            className="text-muted-foreground max-sm:size-8 max-sm:px-0"
+            render={<Link href="/upgrade" />}
+            nativeButton={false}
+          >
+            <Sparkles />
+            <span className="hidden sm:inline">Upgrade</span>
+          </Button>
+        )}
         <Button
           variant="outline"
           size="icon"

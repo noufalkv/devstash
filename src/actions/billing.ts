@@ -52,7 +52,7 @@ export async function createCheckoutSession(
       line_items: [{ price: getPriceId(parsed.data), quantity: 1 }],
       subscription_data: { metadata: { userId } },
       success_url: `${appUrl}/settings?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/settings?checkout=canceled`,
+      cancel_url: `${appUrl}/upgrade?checkout=canceled`,
     });
     if (!checkout.url) return { success: false, error: "Could not start checkout" };
     return { success: true, data: { url: checkout.url } };

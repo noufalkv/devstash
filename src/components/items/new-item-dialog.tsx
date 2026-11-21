@@ -72,7 +72,7 @@ function ItemTypePicker({
       {!canUploadFiles && (
         <p className="text-sm text-muted-foreground">
           File and image uploads are part of Pro.{" "}
-          <Link href="/settings" className="font-medium text-foreground underline underline-offset-4">
+          <Link href="/upgrade" className="font-medium text-foreground underline underline-offset-4">
             Upgrade
           </Link>
         </p>

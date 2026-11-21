@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { connection } from "next/server";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
@@ -9,7 +8,6 @@ import { ImageCard } from "@/components/items/image-card";
 import { ItemCard } from "@/components/items/item-card";
 import { NewItemDialog } from "@/components/items/new-item-dialog";
 import { Pagination } from "@/components/shared/pagination";
-import { Button } from "@/components/ui/button";
 import { getItemsByType, SYSTEM_TYPE_ORDER } from "@/lib/db/items";
 import {
   getPageCount,
@@ -32,23 +30,16 @@ function AddItemButton({
   type: CreatableItemType;
   canUploadFiles: boolean;
 }) {
-  if (!canUploadFiles && isFileItemType(type)) {
-    return (
-      <Button variant="outline" render={<Link href="/settings" />} nativeButton={false}>
-        Upgrade to add {type}s
-      </Button>
-    );
-  }
   return <NewItemDialog defaultType={type} label={`Add ${type}`} canUploadFiles={canUploadFiles} />;
 }
 
 // File and image pages read the plan at request time; the rest of the header still prerenders.
+// Free users are redirected to /upgrade by ItemsGrid, so they get no button.
 async function SessionAddItemButton({ type }: { type: CreatableItemType }) {
   await connection();
   const session = await auth();
-  return (
-    <AddItemButton type={type} canUploadFiles={canUseProFeature(session?.user?.isPro ?? false)} />
-  );
+  if (!canUseProFeature(session?.user?.isPro ?? false)) return null;
+  return <AddItemButton type={type} canUploadFiles />;
 }
 
 const TYPE_BY_SLUG = new Map(SYSTEM_TYPE_ORDER.map((name) => [`${name}s`, name]));
@@ -69,6 +60,8 @@ async function ItemsGrid({ typeName, title, pathname, searchParams }: ItemsGridP
   await connection();
   const session = await auth();
   if (!session?.user?.id) redirect("/sign-in");
+  // Files and images are Pro-only when gating is on
+  if (isFileItemType(typeName) && !canUseProFeature(session.user.isPro)) redirect("/upgrade");
 
   const page = parsePage((await searchParams).page);
   const { rows: items, total } = await getItemsByType(session.user.id, typeName, {

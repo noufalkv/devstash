@@ -31,7 +31,10 @@ export function CommandPaletteProvider({
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key.toLowerCase() !== "k") return;
+      // Autofill and some extensions dispatch keydown events with no `key`
+      if (typeof event.key !== "string" || event.key.toLowerCase() !== "k") {
+        return;
+      }
       if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) {
         return;
       }
