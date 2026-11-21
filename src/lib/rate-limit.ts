@@ -8,6 +8,7 @@ const RATE_LIMITS = {
   forgotPassword: { limit: 3, window: "1 h" },
   resetPassword: { limit: 5, window: "15 m" },
   resendVerification: { limit: 3, window: "15 m" },
+  ai: { limit: 20, window: "1 h" },
 } as const;
 
 export type RateLimitName = keyof typeof RATE_LIMITS;

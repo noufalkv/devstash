@@ -12,6 +12,7 @@ import { FileUpload } from "@/components/items/file-upload";
 import { FormField } from "@/components/items/form-field";
 import { ItemContentField } from "@/components/items/item-content-field";
 import { LanguageSelect } from "@/components/items/language-select";
+import { TagSuggestions } from "@/components/items/tag-suggestions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -110,6 +111,10 @@ function NewItemForm({
   const showLanguage = LANGUAGE_TYPES.has(type);
   const showUrl = URL_TYPES.has(type);
   const fileType = isFileItemType(type) ? type : null;
+  // What the AI reads besides the title: the text content, the link URL or the file name
+  let tagSource = file?.name ?? null;
+  if (showContent) tagSource = content;
+  else if (showUrl) tagSource = url;
   const canSubmit =
     title.trim() !== "" &&
     (!showUrl || url.trim() !== "") &&
@@ -223,6 +228,14 @@ function NewItemForm({
           id="new-item-tags"
           value={tags}
           onChange={(event) => setTags(event.target.value)}
+        />
+        <TagSuggestions
+          type={type}
+          title={title}
+          content={tagSource}
+          tags={tags}
+          onTagsChange={setTags}
+          disabled={isPending}
         />
       </FormField>
 
