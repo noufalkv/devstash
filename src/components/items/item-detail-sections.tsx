@@ -50,6 +50,7 @@ export function ItemBodySection({ item }: { item: ItemDetailJson }) {
           value={item.content}
           language={item.language}
           readOnly
+          explainItemId={item.id}
         />
       </Section>
     );

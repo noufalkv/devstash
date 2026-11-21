@@ -2,31 +2,38 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 
+/** `unknown` until the session is read, `locked` for free users while Pro gating is on. */
+export type AiAccess = "unknown" | "locked" | "allowed";
+
 interface AiAccessContextValue {
-  canUseAi: boolean;
-  setCanUseAi: (value: boolean) => void;
+  access: AiAccess;
+  setAccess: (value: AiAccess) => void;
 }
 
 const AiAccessContext = createContext<AiAccessContextValue | null>(null);
 
-// Starts hidden and is switched on by `AiAccessHydrator` once the session is read,
+// Starts as `unknown` and is set by `AiAccessHydrator` once the session is read,
 // so AI controls never flash for free users. The server action enforces the gate.
 export function AiAccessProvider({ children }: { children: React.ReactNode }) {
-  const [canUseAi, setCanUseAi] = useState(false);
+  const [access, setAccess] = useState<AiAccess>("unknown");
   return (
-    <AiAccessContext.Provider value={{ canUseAi, setCanUseAi }}>{children}</AiAccessContext.Provider>
+    <AiAccessContext.Provider value={{ access, setAccess }}>{children}</AiAccessContext.Provider>
   );
 }
 
-export function AiAccessHydrator({ canUseAi }: { canUseAi: boolean }) {
+export function AiAccessHydrator({ access }: { access: AiAccess }) {
   const context = useContext(AiAccessContext);
-  const setCanUseAi = context?.setCanUseAi;
+  const setAccess = context?.setAccess;
   useEffect(() => {
-    setCanUseAi?.(canUseAi);
-  }, [setCanUseAi, canUseAi]);
+    setAccess?.(access);
+  }, [setAccess, access]);
   return null;
 }
 
+export function useAiAccess(): AiAccess {
+  return useContext(AiAccessContext)?.access ?? "unknown";
+}
+
 export function useCanUseAi(): boolean {
-  return useContext(AiAccessContext)?.canUseAi ?? false;
+  return useAiAccess() === "allowed";
 }
