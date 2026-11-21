@@ -62,10 +62,12 @@ async function SearchPalette() {
 
 // Reads the plan at request time. The Suspense fallback renders the same bar, allowing uploads
 // exactly when gating is off, so the bar shows at once and only free users see it change.
+// The fallback hides the Upgrade link so Pro users never see it flash.
 async function SessionTopBar() {
   await connection();
   const session = await auth();
-  return <TopBar canUploadFiles={canUseProFeature(session?.user?.isPro ?? false)} />;
+  const isPro = session?.user?.isPro ?? false;
+  return <TopBar canUploadFiles={canUseProFeature(isPro)} showUpgrade={Boolean(session?.user) && !isPro} />;
 }
 
 async function EditorPreferencesLoader() {
@@ -81,7 +83,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         <EditorPreferencesProvider>
           <ItemDrawerProvider>
             <div className="flex min-h-full flex-1 flex-col">
-              <Suspense fallback={<TopBar canUploadFiles={!isProGatingEnabled()} />}>
+              <Suspense fallback={<TopBar canUploadFiles={!isProGatingEnabled()} showUpgrade={false} />}>
                 <SessionTopBar />
               </Suspense>
               <div className="flex flex-1">

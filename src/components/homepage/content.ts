@@ -201,6 +201,6 @@ export const PRO_PLAN: Plan = {
     "Export to JSON or ZIP",
     "Priority support",
   ],
-  // Signed-out visitors go through /sign-in?callbackUrl=/settings and land on Billing
-  cta: { label: "Upgrade to Pro", href: "/settings" },
+  // Signed-out visitors go through /sign-in?callbackUrl=/upgrade; Pro users are sent on to /settings
+  cta: { label: "Upgrade to Pro", href: "/upgrade" },
 };

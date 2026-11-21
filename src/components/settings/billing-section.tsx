@@ -1,5 +1,7 @@
-import { CheckoutToast, ManageBillingButton, UpgradeButton } from "@/components/settings/billing-actions";
-import { PRO_PRICES } from "@/components/homepage/content";
+import { Sparkles } from "lucide-react";
+
+import { ButtonLink } from "@/components/homepage/button-link";
+import { CheckoutToast, ManageBillingButton } from "@/components/settings/billing-actions";
 import { Card, CardContent } from "@/components/ui/card";
 import type { SubscriptionDetails } from "@/lib/billing";
 import type { PlanUsage } from "@/lib/db/users";
@@ -17,7 +19,6 @@ interface BillingSectionProps {
 const BILLING_LABELS = { monthly: "Monthly", yearly: "Yearly" } as const;
 
 function FreePlan({ usage }: { usage: PlanUsage }) {
-  const { monthly, yearly } = PRO_PRICES;
   return (
     <>
       <div>
@@ -34,14 +35,10 @@ function FreePlan({ usage }: { usage: PlanUsage }) {
       <p className="text-sm text-muted-foreground">
         Pro adds unlimited items and collections, file and image uploads, and AI features.
       </p>
-      <div className="flex flex-wrap gap-2">
-        <UpgradeButton billing="monthly" label={`Upgrade – ${monthly.amount}${monthly.period}`} />
-        <UpgradeButton
-          billing="yearly"
-          variant="outline"
-          label={`Upgrade – ${yearly.amount}${yearly.period}`}
-        />
-      </div>
+      <ButtonLink href="/upgrade" className="w-fit">
+        <Sparkles />
+        Upgrade to Pro
+      </ButtonLink>
     </>
   );
 }
@@ -96,7 +93,7 @@ export function BillingSection({
           )}
         </CardContent>
       </Card>
-      {checkout && <CheckoutToast status={checkout} />}
+      {checkout && <CheckoutToast status={checkout} path="/settings" />}
     </section>
   );
 }

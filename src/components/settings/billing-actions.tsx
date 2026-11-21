@@ -4,12 +4,12 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useTransition } from "react";
 import { toast } from "sonner";
 
-import { createCheckoutSession, createPortalSession } from "@/actions/billing";
+import { createPortalSession } from "@/actions/billing";
 import type { BillingActionResult } from "@/actions/billing";
 import { Button } from "@/components/ui/button";
-import type { Billing } from "@/lib/stripe";
 
-function useRedirectAction(action: () => Promise<BillingActionResult<{ url: string }>>) {
+/** Runs a billing action and sends the browser to the Stripe URL it returns, or toasts its error. */
+export function useRedirectAction(action: () => Promise<BillingActionResult<{ url: string }>>) {
   const [isPending, startTransition] = useTransition();
 
   function run() {
@@ -26,21 +26,6 @@ function useRedirectAction(action: () => Promise<BillingActionResult<{ url: stri
   return { isPending, run };
 }
 
-interface UpgradeButtonProps {
-  billing: Billing;
-  label: string;
-  variant?: "default" | "outline";
-}
-
-export function UpgradeButton({ billing, label, variant = "default" }: UpgradeButtonProps) {
-  const { isPending, run } = useRedirectAction(() => createCheckoutSession(billing));
-  return (
-    <Button variant={variant} onClick={run} disabled={isPending}>
-      {isPending ? "Redirecting…" : label}
-    </Button>
-  );
-}
-
 export function ManageBillingButton() {
   const { isPending, run } = useRedirectAction(createPortalSession);
   return (
@@ -52,10 +37,12 @@ export function ManageBillingButton() {
 
 interface CheckoutToastProps {
   status: "success" | "canceled";
+  /** The current page, which the URL is replaced with. */
+  path: string;
 }
 
 // Toasts once, then strips the query string so a reload does not toast again
-export function CheckoutToast({ status }: CheckoutToastProps) {
+export function CheckoutToast({ status, path }: CheckoutToastProps) {
   const router = useRouter();
   const shown = useRef(false);
 
@@ -67,8 +54,8 @@ export function CheckoutToast({ status }: CheckoutToastProps) {
     } else {
       toast("Checkout canceled");
     }
-    router.replace("/settings");
-  }, [status, router]);
+    router.replace(path);
+  }, [status, path, router]);
 
   return null;
 }

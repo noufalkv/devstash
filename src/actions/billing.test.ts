@@ -115,7 +115,7 @@ describe("createCheckoutSession", () => {
       subscription_data: { metadata: { userId: "u1" } },
       success_url:
         "https://devstash.test/settings?checkout=success&session_id={CHECKOUT_SESSION_ID}",
-      cancel_url: "https://devstash.test/settings?checkout=canceled",
+      cancel_url: "https://devstash.test/upgrade?checkout=canceled",
     });
     expect(result).toEqual({
       success: true,

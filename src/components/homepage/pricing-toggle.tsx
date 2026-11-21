@@ -14,7 +14,7 @@ interface BillingContextValue {
 
 const BillingContext = createContext<BillingContextValue | null>(null);
 
-function useBilling(): BillingContextValue {
+export function useBilling(): BillingContextValue {
   const value = useContext(BillingContext);
   if (!value) throw new Error("useBilling must be used inside BillingProvider");
   return value;
