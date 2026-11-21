@@ -4,6 +4,11 @@ import { z } from "zod";
 
 import { auth } from "@/auth";
 import {
+  buildDescriptionPrompt,
+  cleanDescription,
+  DESCRIPTION_INSTRUCTIONS,
+} from "@/lib/ai-description";
+import {
   AUTO_TAG_INSTRUCTIONS,
   buildAutoTagPrompt,
   normalizeSuggestedTags,
@@ -21,7 +26,7 @@ export interface AiActionResult<T> {
   rateLimited?: boolean;
 }
 
-const AI_ERROR = "AI tag suggestions are unavailable right now. Please try again.";
+const AI_ERROR = "AI suggestions are unavailable right now. Please try again.";
 
 // Content is truncated to 2000 characters before the API call; this cap only rejects absurd payloads.
 const autoTagSchema = z.object({
@@ -69,6 +74,56 @@ export async function generateAutoTags(
     return { success: true, data: { tags } };
   } catch (error) {
     console.error("generateAutoTags failed:", error);
+    return { success: false, error: AI_ERROR };
+  }
+}
+
+const descriptionSchema = z.object({
+  type: z.string().trim().min(1).max(30),
+  title: z.string().trim().min(1, "Add a title first").max(300),
+  content: z.string().max(100_000).nullish(),
+  language: z.string().max(50).nullish(),
+  tags: z
+    .array(z.string().max(100))
+    .max(50)
+    .default([])
+    .transform((tags) => tags.map((tag) => tag.trim()).filter(Boolean)),
+});
+
+export async function generateDescription(
+  input: unknown,
+): Promise<AiActionResult<{ description: string }>> {
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) return { success: false, error: "You must be signed in" };
+  if (!canUseProFeature(session.user.isPro)) {
+    return { success: false, error: "AI descriptions are a Pro feature", upgrade: true };
+  }
+  if (!isAiConfigured()) return { success: false, error: AI_ERROR };
+
+  // Validate before the rate limit so invalid input does not use up quota
+  const parsed = descriptionSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
+  const { success, reset } = await checkRateLimit("ai", userId);
+  if (!success) return { success: false, error: rateLimitMessage(reset), rateLimited: true };
+
+  try {
+    const response = await getOpenAI().responses.create({
+      model: AI_MODEL,
+      instructions: DESCRIPTION_INSTRUCTIONS,
+      input: buildDescriptionPrompt(parsed.data),
+      reasoning: { effort: "low" },
+      store: false,
+    });
+
+    const description = cleanDescription(response.output_text);
+    if (!description) return { success: false, error: "Could not generate a description" };
+    return { success: true, data: { description } };
+  } catch (error) {
+    console.error("generateDescription failed:", error);
     return { success: false, error: AI_ERROR };
   }
 }

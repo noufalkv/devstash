@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { createItem } from "@/actions/items";
 import { CollectionPicker } from "@/components/items/collection-picker";
+import { DescriptionGenerator } from "@/components/items/description-generator";
 import { FileUpload } from "@/components/items/file-upload";
 import { FormField } from "@/components/items/form-field";
 import { ItemContentField } from "@/components/items/item-content-field";
@@ -112,9 +113,9 @@ function NewItemForm({
   const showUrl = URL_TYPES.has(type);
   const fileType = isFileItemType(type) ? type : null;
   // What the AI reads besides the title: the text content, the link URL or the file name
-  let tagSource = file?.name ?? null;
-  if (showContent) tagSource = content;
-  else if (showUrl) tagSource = url;
+  let aiSource = file?.name ?? null;
+  if (showContent) aiSource = content;
+  else if (showUrl) aiSource = url;
   const canSubmit =
     title.trim() !== "" &&
     (!showUrl || url.trim() !== "") &&
@@ -168,7 +169,21 @@ function NewItemForm({
         />
       </FormField>
 
-      <FormField id="new-item-description" label="Description">
+      <FormField
+        id="new-item-description"
+        label="Description"
+        action={
+          <DescriptionGenerator
+            type={type}
+            title={title}
+            content={aiSource}
+            language={showLanguage ? language : null}
+            tags={tags}
+            onGenerated={setDescription}
+            disabled={isPending}
+          />
+        }
+      >
         <Textarea
           id="new-item-description"
           value={description}
@@ -232,7 +247,7 @@ function NewItemForm({
         <TagSuggestions
           type={type}
           title={title}
-          content={tagSource}
+          content={aiSource}
           tags={tags}
           onTagsChange={setTags}
           disabled={isPending}
