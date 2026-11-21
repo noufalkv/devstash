@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { auth } from "@/auth";
+import { AiAccessHydrator, AiAccessProvider } from "@/components/items/ai-access-provider";
 import { ItemDrawerProvider } from "@/components/items/item-drawer-provider";
 import { Sidebar } from "@/components/layout/sidebar";
 import { SidebarProvider } from "@/components/layout/sidebar-provider";
@@ -70,6 +71,12 @@ async function SessionTopBar() {
   return <TopBar canUploadFiles={canUseProFeature(isPro)} showUpgrade={Boolean(session?.user) && !isPro} />;
 }
 
+async function AiAccessLoader() {
+  await connection();
+  const session = await auth();
+  return <AiAccessHydrator canUseAi={canUseProFeature(session?.user?.isPro ?? false)} />;
+}
+
 async function EditorPreferencesLoader() {
   const userId = await requireUserId();
   const preferences = await getEditorPreferences(userId);
@@ -81,25 +88,30 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
       <CommandPaletteProvider>
         <EditorPreferencesProvider>
-          <ItemDrawerProvider>
-            <div className="flex min-h-full flex-1 flex-col">
-              <Suspense fallback={<TopBar canUploadFiles={!isProGatingEnabled()} showUpgrade={false} />}>
-                <SessionTopBar />
-              </Suspense>
-              <div className="flex flex-1">
-                <Suspense fallback={<SidebarSkeleton />}>
-                  <DashboardSidebar />
+          <AiAccessProvider>
+            <ItemDrawerProvider>
+              <div className="flex min-h-full flex-1 flex-col">
+                <Suspense fallback={<TopBar canUploadFiles={!isProGatingEnabled()} showUpgrade={false} />}>
+                  <SessionTopBar />
                 </Suspense>
-                <main className="min-w-0 flex-1 p-6">{children}</main>
+                <div className="flex flex-1">
+                  <Suspense fallback={<SidebarSkeleton />}>
+                    <DashboardSidebar />
+                  </Suspense>
+                  <main className="min-w-0 flex-1 p-6">{children}</main>
+                </div>
               </div>
-            </div>
-            <Suspense fallback={null}>
-              <SearchPalette />
-            </Suspense>
-            <Suspense fallback={null}>
-              <EditorPreferencesLoader />
-            </Suspense>
-          </ItemDrawerProvider>
+              <Suspense fallback={null}>
+                <SearchPalette />
+              </Suspense>
+              <Suspense fallback={null}>
+                <EditorPreferencesLoader />
+              </Suspense>
+              <Suspense fallback={null}>
+                <AiAccessLoader />
+              </Suspense>
+            </ItemDrawerProvider>
+          </AiAccessProvider>
         </EditorPreferencesProvider>
       </CommandPaletteProvider>
     </SidebarProvider>

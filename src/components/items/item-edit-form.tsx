@@ -9,6 +9,7 @@ import { FormField } from "@/components/items/form-field";
 import { ItemContentField } from "@/components/items/item-content-field";
 import { LanguageSelect } from "@/components/items/language-select";
 import { CollectionPicker } from "@/components/items/collection-picker";
+import { TagSuggestions } from "@/components/items/tag-suggestions";
 import { ItemDatesSection } from "@/components/items/item-detail-sections";
 import type { ItemDetailJson } from "@/components/items/item-drawer";
 import { ItemTypeIcon } from "@/components/items/item-type-icon";
@@ -83,6 +84,10 @@ export function ItemEditForm({ item, onCancel, onSaved }: ItemEditFormProps) {
   const showContent = item.contentType === "TEXT" && CONTENT_TYPES.has(typeName);
   const showLanguage = LANGUAGE_TYPES.has(typeName);
   const showUrl = URL_TYPES.has(typeName);
+  // What the AI reads besides the title: the text content, the link URL or the file name
+  let tagSource = item.fileName;
+  if (showContent) tagSource = content;
+  else if (showUrl) tagSource = url;
 
   function handleSave() {
     startTransition(async () => {
@@ -179,6 +184,14 @@ export function ItemEditForm({ item, onCancel, onSaved }: ItemEditFormProps) {
             id="item-tags"
             value={tags}
             onChange={(event) => setTags(event.target.value)}
+          />
+          <TagSuggestions
+            type={typeName}
+            title={title}
+            content={tagSource}
+            tags={tags}
+            onTagsChange={setTags}
+            disabled={isPending}
           />
         </FormField>
 
