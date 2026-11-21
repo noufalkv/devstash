@@ -20,7 +20,7 @@ vi.mock("@/lib/rate-limit", () => ({
   rateLimitMessage: () => "Too many attempts. Please try again in 5 minutes.",
 }));
 
-import { explainCode, generateAutoTags, generateDescription } from "./ai";
+import { explainCode, generateAutoTags, generateDescription, optimizePrompt } from "./ai";
 
 const validInput = {
   type: "snippet",
@@ -387,6 +387,173 @@ describe("explainCode", () => {
     mocks.responsesCreate.mockRejectedValue(new Error("429 quota"));
 
     expect(await explainCode({ itemId: "i1" })).toEqual({
+      success: false,
+      error: "AI suggestions are unavailable right now. Please try again.",
+    });
+  });
+});
+
+describe("optimizePrompt", () => {
+  const prompt = {
+    id: "p1",
+    title: "Code review",
+    content: "review my code",
+    itemType: { name: "prompt" },
+  };
+  const reply = {
+    optimized: "Review the code below for bugs and readability.\n\n{{code}}",
+    changes: "Added a clear task and a placeholder.",
+    unchanged: false,
+  };
+
+  beforeEach(() => {
+    mocks.getItemDetail.mockResolvedValue(prompt);
+    mocks.responsesCreate.mockResolvedValue({ output_text: JSON.stringify(reply) });
+  });
+
+  it("requires a session", async () => {
+    mocks.auth.mockResolvedValue(null);
+
+    expect(await optimizePrompt({ itemId: "p1" })).toEqual({
+      success: false,
+      error: "You must be signed in",
+    });
+    expect(mocks.getItemDetail).not.toHaveBeenCalled();
+  });
+
+  it("blocks free users when gating is on", async () => {
+    mocks.auth.mockResolvedValue({ user: { id: "u1", isPro: false } });
+
+    expect(await optimizePrompt({ itemId: "p1" })).toEqual({
+      success: false,
+      error: "AI prompt optimization is a Pro feature",
+      upgrade: true,
+    });
+    expect(mocks.checkRateLimit).not.toHaveBeenCalled();
+    expect(mocks.responsesCreate).not.toHaveBeenCalled();
+  });
+
+  it("allows free users when gating is off", async () => {
+    vi.stubEnv("ENFORCE_PRO_LIMITS", "");
+    mocks.auth.mockResolvedValue({ user: { id: "u1", isPro: false } });
+
+    expect((await optimizePrompt({ itemId: "p1" })).success).toBe(true);
+  });
+
+  it("returns an error when OpenAI is not configured", async () => {
+    mocks.isAiConfigured.mockReturnValue(false);
+
+    expect(await optimizePrompt({ itemId: "p1" })).toEqual({
+      success: false,
+      error: "AI suggestions are unavailable right now. Please try again.",
+    });
+    expect(mocks.getItemDetail).not.toHaveBeenCalled();
+  });
+
+  it("rejects invalid input without using quota", async () => {
+    expect(await optimizePrompt({ itemId: "" })).toEqual({
+      success: false,
+      error: "Invalid item",
+    });
+    expect(mocks.getItemDetail).not.toHaveBeenCalled();
+    expect(mocks.checkRateLimit).not.toHaveBeenCalled();
+  });
+
+  it("loads the item scoped to the signed-in user", async () => {
+    mocks.getItemDetail.mockResolvedValue(null);
+
+    expect(await optimizePrompt({ itemId: "p1" })).toEqual({
+      success: false,
+      error: "Item not found",
+    });
+    expect(mocks.getItemDetail).toHaveBeenCalledWith("p1", "u1");
+    expect(mocks.checkRateLimit).not.toHaveBeenCalled();
+  });
+
+  it("only optimizes prompts", async () => {
+    mocks.getItemDetail.mockResolvedValue({ ...prompt, itemType: { name: "note" } });
+
+    expect(await optimizePrompt({ itemId: "p1" })).toEqual({
+      success: false,
+      error: "Item not found",
+    });
+    expect(mocks.responsesCreate).not.toHaveBeenCalled();
+  });
+
+  it("returns an error when the prompt is blank", async () => {
+    mocks.getItemDetail.mockResolvedValue({ ...prompt, content: "  " });
+
+    expect(await optimizePrompt({ itemId: "p1" })).toEqual({
+      success: false,
+      error: "There is no prompt to optimize",
+    });
+    expect(mocks.checkRateLimit).not.toHaveBeenCalled();
+  });
+
+  it("rejects prompts too long to send whole, without using quota", async () => {
+    mocks.getItemDetail.mockResolvedValue({ ...prompt, content: "a".repeat(8001) });
+
+    expect(await optimizePrompt({ itemId: "p1" })).toEqual({
+      success: false,
+      error: "This prompt is too long to optimize",
+    });
+    expect(mocks.checkRateLimit).not.toHaveBeenCalled();
+  });
+
+  it("returns the rate limit message", async () => {
+    mocks.checkRateLimit.mockResolvedValue({ success: false, remaining: 0, reset: 0 });
+
+    expect(await optimizePrompt({ itemId: "p1" })).toEqual({
+      success: false,
+      error: "Too many attempts. Please try again in 5 minutes.",
+      rateLimited: true,
+    });
+    expect(mocks.checkRateLimit).toHaveBeenCalledWith("ai", "u1");
+    expect(mocks.responsesCreate).not.toHaveBeenCalled();
+  });
+
+  it("returns the optimized prompt", async () => {
+    expect(await optimizePrompt({ itemId: "p1" })).toEqual({ success: true, data: reply });
+
+    const request = mocks.responsesCreate.mock.calls[0][0];
+    expect(request).toMatchObject({
+      model: "test-model",
+      reasoning: { effort: "low" },
+      text: { format: { type: "json_object" } },
+      store: false,
+    });
+    expect(request.input).toContain("review my code");
+    expect(request.input).toContain("JSON");
+  });
+
+  it("reports an unchanged prompt", async () => {
+    mocks.responsesCreate.mockResolvedValue({
+      output_text: JSON.stringify({ optimized: "review my code", changes: "", unchanged: false }),
+    });
+
+    expect(await optimizePrompt({ itemId: "p1" })).toEqual({
+      success: true,
+      data: {
+        optimized: "review my code",
+        changes: "This prompt is already clear and effective.",
+        unchanged: true,
+      },
+    });
+  });
+
+  it("returns an error for an unusable reply", async () => {
+    mocks.responsesCreate.mockResolvedValue({ output_text: "not json" });
+
+    expect(await optimizePrompt({ itemId: "p1" })).toEqual({
+      success: false,
+      error: "Could not optimize this prompt",
+    });
+  });
+
+  it("returns a generic error when OpenAI fails", async () => {
+    mocks.responsesCreate.mockRejectedValue(new Error("429 You have no credits"));
+
+    expect(await optimizePrompt({ itemId: "p1" })).toEqual({
       success: false,
       error: "AI suggestions are unavailable right now. Please try again.",
     });

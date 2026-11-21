@@ -19,8 +19,10 @@ import {
   deleteItem as deleteItemQuery,
   getItemFile,
   setItemFavorite as setItemFavoriteQuery,
+  setItemContent,
   setItemPinned,
   updateItem as updateItemQuery,
+  type ContentState,
   type FavoriteState,
   type ItemDetail,
   type PinState,
@@ -242,6 +244,33 @@ export async function toggleItemPin(
       parsed.data.id,
       parsed.data.isPinned,
     );
+    if (!state) return { success: false, error: "Item not found" };
+    return { success: true, data: state };
+  } catch {
+    return { success: false, error: "Something went wrong. Please try again." };
+  }
+}
+
+const contentSchema = z.object({
+  id: z.string().min(1),
+  content: z.string().refine((value) => value.trim().length > 0, "Content is required"),
+});
+
+// Saves new text content without touching the item's other fields, e.g. an accepted AI-optimized prompt
+export async function updateItemContent(
+  data: unknown,
+): Promise<ItemActionResult<ContentState>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "You must be signed in" };
+
+  const parsed = contentSchema.safeParse(data);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    return { success: false, error: issue?.path[0] === "content" ? issue.message : "Invalid item" };
+  }
+
+  try {
+    const state = await setItemContent(session.user.id, parsed.data.id, parsed.data.content);
     if (!state) return { success: false, error: "Item not found" };
     return { success: true, data: state };
   } catch {

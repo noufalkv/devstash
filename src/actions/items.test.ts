@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   findOwnedCollectionIds: vi.fn(),
   setItemFavorite: vi.fn(),
   setItemPinned: vi.fn(),
+  setItemContent: vi.fn(),
   getPlanUsage: vi.fn(),
 }));
 
@@ -22,6 +23,7 @@ vi.mock("@/lib/db/items", () => ({
   getItemFile: mocks.getItemFile,
   setItemFavorite: mocks.setItemFavorite,
   setItemPinned: mocks.setItemPinned,
+  setItemContent: mocks.setItemContent,
 }));
 vi.mock("@/lib/db/collections", () => ({
   findOwnedCollectionIds: mocks.findOwnedCollectionIds,
@@ -37,6 +39,7 @@ import {
   setItemFavorite,
   toggleItemPin,
   updateItem,
+  updateItemContent,
 } from "./items";
 
 const validData = {
@@ -671,6 +674,64 @@ describe("toggleItemPin", () => {
     mocks.setItemPinned.mockRejectedValue(new Error("db down"));
 
     expect(await toggleItemPin({ id: "item-1", isPinned: true })).toEqual({
+      success: false,
+      error: "Something went wrong. Please try again.",
+    });
+  });
+});
+
+describe("updateItemContent", () => {
+  const state = { content: "New prompt", updatedAt: new Date("2026-11-21T00:00:00Z") };
+
+  it("requires a session", async () => {
+    mocks.auth.mockResolvedValue(null);
+
+    expect(await updateItemContent({ id: "item-1", content: "New prompt" })).toEqual({
+      success: false,
+      error: "You must be signed in",
+    });
+    expect(mocks.setItemContent).not.toHaveBeenCalled();
+  });
+
+  it.each([{ id: "", content: "New prompt" }, { content: "New prompt" }, null])(
+    "rejects invalid input %j",
+    async (input) => {
+      expect(await updateItemContent(input)).toEqual({ success: false, error: "Invalid item" });
+      expect(mocks.setItemContent).not.toHaveBeenCalled();
+    },
+  );
+
+  it("rejects blank content", async () => {
+    expect(await updateItemContent({ id: "item-1", content: "  " })).toEqual({
+      success: false,
+      error: "Content is required",
+    });
+    expect(mocks.setItemContent).not.toHaveBeenCalled();
+  });
+
+  it("saves the content for the signed-in user", async () => {
+    mocks.setItemContent.mockResolvedValue(state);
+
+    expect(await updateItemContent({ id: "item-1", content: "New prompt" })).toEqual({
+      success: true,
+      data: state,
+    });
+    expect(mocks.setItemContent).toHaveBeenCalledWith("u1", "item-1", "New prompt");
+  });
+
+  it("returns an error when the item is not found", async () => {
+    mocks.setItemContent.mockResolvedValue(null);
+
+    expect(await updateItemContent({ id: "item-1", content: "New prompt" })).toEqual({
+      success: false,
+      error: "Item not found",
+    });
+  });
+
+  it("returns a generic error when the query fails", async () => {
+    mocks.setItemContent.mockRejectedValue(new Error("db down"));
+
+    expect(await updateItemContent({ id: "item-1", content: "New prompt" })).toEqual({
       success: false,
       error: "Something went wrong. Please try again.",
     });

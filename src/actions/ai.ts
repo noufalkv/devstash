@@ -15,6 +15,13 @@ import {
   normalizeSuggestedTags,
   parseTagResponse,
 } from "@/lib/ai-tags";
+import {
+  buildOptimizePrompt,
+  OPTIMIZE_CONTENT_LIMIT,
+  OPTIMIZE_INSTRUCTIONS,
+  parseOptimizeResponse,
+  type PromptOptimization,
+} from "@/lib/ai-optimize";
 import { getItemDetail } from "@/lib/db/items";
 import { CODE_EDITOR_TYPES } from "@/lib/item-fields";
 import { AI_MODEL, getOpenAI, isAiConfigured } from "@/lib/openai";
@@ -180,6 +187,57 @@ export async function explainCode(
     return { success: true, data: { explanation } };
   } catch (error) {
     console.error("explainCode failed:", error);
+    return { success: false, error: AI_ERROR };
+  }
+}
+
+const optimizeSchema = z.object({ itemId: z.string().trim().min(1, "Invalid item").max(100) });
+
+// Loads the prompt by owned item id, like explainCode. Nothing is saved here: the client
+// shows the result and saves it with updateItemContent only if the user accepts it.
+export async function optimizePrompt(
+  input: unknown,
+): Promise<AiActionResult<PromptOptimization>> {
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) return { success: false, error: "You must be signed in" };
+  if (!canUseProFeature(session.user.isPro)) {
+    return { success: false, error: "AI prompt optimization is a Pro feature", upgrade: true };
+  }
+  if (!isAiConfigured()) return { success: false, error: AI_ERROR };
+
+  const parsed = optimizeSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
+  // Checked before the rate limit so a bad id does not use up quota
+  const item = await getItemDetail(parsed.data.itemId, userId);
+  if (!item || item.itemType.name !== "prompt") return { success: false, error: "Item not found" };
+  const content = item.content?.trim();
+  if (!content) return { success: false, error: "There is no prompt to optimize" };
+  if (content.length > OPTIMIZE_CONTENT_LIMIT) {
+    return { success: false, error: "This prompt is too long to optimize" };
+  }
+
+  const { success, reset } = await checkRateLimit("ai", userId);
+  if (!success) return { success: false, error: rateLimitMessage(reset), rateLimited: true };
+
+  try {
+    const response = await getOpenAI().responses.create({
+      model: AI_MODEL,
+      instructions: OPTIMIZE_INSTRUCTIONS,
+      input: buildOptimizePrompt({ title: item.title, content }),
+      reasoning: { effort: "low" },
+      text: { format: { type: "json_object" } },
+      store: false,
+    });
+
+    const result = parseOptimizeResponse(response.output_text, item.content ?? "");
+    if (!result) return { success: false, error: "Could not optimize this prompt" };
+    return { success: true, data: result };
+  } catch (error) {
+    console.error("optimizePrompt failed:", error);
     return { success: false, error: AI_ERROR };
   }
 }
