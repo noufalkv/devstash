@@ -8,6 +8,7 @@ import {
   LANGUAGE_TYPES,
   URL_TYPES,
 } from "@/lib/item-fields";
+import { normalizeCodeLanguage } from "@/lib/code-language";
 import { isFileItemType, validateFile } from "@/lib/file-upload";
 import { deleteFromR2, isOwnedKey } from "@/lib/r2";
 import { canUseProFeature, getItemLimitError } from "@/lib/usage-limits";
@@ -48,7 +49,17 @@ const updateItemSchema = z.object({
     .nullish()
     .transform((value) => value?.trim() || null)
     .refine((value) => value === null || URL.canParse(value), "URL is not valid"),
-  language: optionalText,
+  language: z
+    .string()
+    .nullish()
+    .transform((value, ctx) => {
+      const language = normalizeCodeLanguage(value);
+      if (language === undefined) {
+        ctx.addIssue({ code: "custom", message: "Language is not supported" });
+        return z.NEVER;
+      }
+      return language;
+    }),
   tags: z
     .array(z.string())
     .transform((tags) => [

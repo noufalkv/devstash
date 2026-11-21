@@ -11,6 +11,7 @@ import { CollectionPicker } from "@/components/items/collection-picker";
 import { FileUpload } from "@/components/items/file-upload";
 import { FormField } from "@/components/items/form-field";
 import { ItemContentField } from "@/components/items/item-content-field";
+import { LanguageSelect } from "@/components/items/language-select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,6 +30,7 @@ import {
   URL_TYPES,
   type CreatableItemType,
 } from "@/lib/item-fields";
+import { DEFAULT_CODE_LANGUAGE } from "@/lib/code-language";
 import { isFileItemType } from "@/lib/file-upload";
 import type { ItemFileData } from "@/lib/db/items";
 
@@ -98,7 +100,7 @@ function NewItemForm({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [content, setContent] = useState("");
-  const [language, setLanguage] = useState("");
+  const [language, setLanguage] = useState(DEFAULT_CODE_LANGUAGE);
   const [url, setUrl] = useState("");
   const [tags, setTags] = useState("");
   const [file, setFile] = useState<ItemFileData | null>(null);
@@ -181,6 +183,17 @@ function NewItemForm({
         </FormField>
       )}
 
+      {showLanguage && (
+        <FormField id="new-item-language" label="Language">
+          <LanguageSelect
+            id="new-item-language"
+            value={language}
+            onChange={setLanguage}
+            disabled={isPending}
+          />
+        </FormField>
+      )}
+
       {showContent && (
         <FormField id="new-item-content" label="Content">
           <ItemContentField
@@ -190,16 +203,6 @@ function NewItemForm({
             onChange={setContent}
             language={language}
             textareaClassName="min-h-32"
-          />
-        </FormField>
-      )}
-
-      {showLanguage && (
-        <FormField id="new-item-language" label="Language">
-          <Input
-            id="new-item-language"
-            value={language}
-            onChange={(event) => setLanguage(event.target.value)}
           />
         </FormField>
       )}

@@ -132,6 +132,19 @@ describe("updateItem", () => {
     });
   });
 
+  it("rewrites a language alias to its canonical id", async () => {
+    await updateItem("item-1", { ...validData, language: "ts" });
+
+    expect(mocks.updateItem.mock.calls[0][2].language).toBe("typescript");
+  });
+
+  it("rejects an unsupported language", async () => {
+    const result = await updateItem("item-1", { ...validData, language: "sfsdf" });
+
+    expect(result).toEqual({ success: false, error: "Language is not supported" });
+    expect(mocks.updateItem).not.toHaveBeenCalled();
+  });
+
   it("passes only de-duplicated collection ids the user owns", async () => {
     await updateItem("item-1", {
       ...validData,
@@ -366,6 +379,25 @@ describe("createItem", () => {
       tags: ["react", "auth"],
       collectionIds: [],
     });
+  });
+
+  it("stores the canonical id for a language alias", async () => {
+    await createItem({ ...snippet, language: " Bash " });
+
+    expect(mocks.createItem.mock.calls[0][1].language).toBe("shell");
+  });
+
+  it("stores plain text as no language", async () => {
+    await createItem({ ...snippet, language: "plaintext" });
+
+    expect(mocks.createItem.mock.calls[0][1].language).toBeNull();
+  });
+
+  it("rejects an unsupported language", async () => {
+    const result = await createItem({ ...snippet, language: "brainfuck" });
+
+    expect(result).toEqual({ success: false, error: "Language is not supported" });
+    expect(mocks.createItem).not.toHaveBeenCalled();
   });
 
   it("adds the item to the collections the user owns", async () => {

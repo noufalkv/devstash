@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { useEditorPreferences } from "@/components/settings/editor-preferences-provider";
-import { resolveCodeLanguage } from "@/lib/code-language";
+import { getCodeLanguageLabel, resolveCodeLanguage } from "@/lib/code-language";
 import { defineEditorThemes, EDITOR_THEME_DEFINITIONS } from "@/lib/editor-themes";
 import { cn } from "@/lib/utils";
 
@@ -92,7 +92,7 @@ export function CodeEditor({
           <span className="size-3 rounded-full bg-[#28c840]" />
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="font-mono">{monacoLanguage}</span>
+          <span className="font-mono">{getCodeLanguageLabel(monacoLanguage)}</span>
           <button
             type="button"
             onClick={handleCopy}
