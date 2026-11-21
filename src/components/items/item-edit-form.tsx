@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { updateItem } from "@/actions/items";
 import { FormField } from "@/components/items/form-field";
 import { ItemContentField } from "@/components/items/item-content-field";
+import { LanguageSelect } from "@/components/items/language-select";
 import { CollectionPicker } from "@/components/items/collection-picker";
 import { ItemDatesSection } from "@/components/items/item-detail-sections";
 import type { ItemDetailJson } from "@/components/items/item-drawer";
@@ -16,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
+import { resolveCodeLanguage } from "@/lib/code-language";
 import { CONTENT_TYPES, LANGUAGE_TYPES, URL_TYPES } from "@/lib/item-fields";
 
 interface ItemEditFormProps {
@@ -70,7 +72,7 @@ export function ItemEditForm({ item, onCancel, onSaved }: ItemEditFormProps) {
   const [title, setTitle] = useState(item.title);
   const [description, setDescription] = useState(item.description ?? "");
   const [content, setContent] = useState(item.content ?? "");
-  const [language, setLanguage] = useState(item.language ?? "");
+  const [language, setLanguage] = useState(() => resolveCodeLanguage(item.language));
   const [url, setUrl] = useState(item.url ?? "");
   const [tags, setTags] = useState(item.tags.join(", "));
   const [collectionIds, setCollectionIds] = useState(
@@ -138,6 +140,17 @@ export function ItemEditForm({ item, onCancel, onSaved }: ItemEditFormProps) {
           />
         </FormField>
 
+        {showLanguage && (
+          <FormField id="item-language" label="Language">
+            <LanguageSelect
+              id="item-language"
+              value={language}
+              onChange={setLanguage}
+              disabled={isPending}
+            />
+          </FormField>
+        )}
+
         {showContent && (
           <FormField id="item-content" label="Content">
             <ItemContentField
@@ -147,16 +160,6 @@ export function ItemEditForm({ item, onCancel, onSaved }: ItemEditFormProps) {
               onChange={setContent}
               language={language}
               textareaClassName="min-h-40"
-            />
-          </FormField>
-        )}
-
-        {showLanguage && (
-          <FormField id="item-language" label="Language">
-            <Input
-              id="item-language"
-              value={language}
-              onChange={(event) => setLanguage(event.target.value)}
             />
           </FormField>
         )}
