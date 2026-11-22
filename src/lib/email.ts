@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 
-const FROM_EMAIL = "Devstash <onboarding@resend.dev>";
+const FROM_EMAIL = "Devstash <noreplay@dev-stash.site>";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
